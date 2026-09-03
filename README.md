@@ -3,6 +3,8 @@
 [![Check](https://github.com/pig0224/agile-templates/actions/workflows/check.yml/badge.svg)](https://github.com/pig0224/agile-templates/actions/workflows/check.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
+📖 **完整文档**：https://pig0224.github.io/agile-docs/ （模板使用 / 开发指南 / 发布）
+
 [agile CLI](https://github.com/pig0224/agile-cli) 的**项目模板源**：`registry.yaml` 声明全部模板。**新增模板无需升级 CLI** —— 新建目录 + 登记 registry.yaml 即可。以 git 仓库分发，推送即发版，无需 npm、无需构建。
 
 ## 用户视角
