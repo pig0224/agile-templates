@@ -1,4 +1,4 @@
-# agile-templates（项目模板注册中心）
+# Agile-Templates（项目模板注册中心）
 
 [![Check](https://github.com/pig0224/agile-templates/actions/workflows/check.yml/badge.svg)](https://github.com/pig0224/agile-templates/actions/workflows/check.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -45,7 +45,7 @@ agile template update               # 强制刷新模板缓存
 - `{{name}}` → 项目名（用户输入）
 - `{{safeName}}` → 小写字母数字安全段（Java 包名等场景）
 
-**缓存**：CLI 将本仓库克隆到 `~/.agile/templates/<url-hash>`（用户级，跨 workspace 共享），自动同步，失联时降级使用本地缓存。
+**缓存**：CLI 将本仓库克隆到 `~/.agile/templates/<url-hash>`（用户级，跨 workspace 共享），默认读缓存，`agile template update` / `--refresh` 时联网刷新，失联降级使用本地缓存。
 
 详细设计：[docs/registry.md](./docs/registry.md)；开发约定见 [CLAUDE.md](./CLAUDE.md)。
 

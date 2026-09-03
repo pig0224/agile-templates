@@ -18,7 +18,7 @@ CLI 侧命令：
 
 | 命令 | 说明 |
 |---|---|
-| `agile template list [--registry url] [--no-refresh] [--json]` | 列出模板（默认联网刷新缓存） |
+| `agile template list [--registry url] [--refresh] [--json]` | 列出模板（默认读本地缓存，`--refresh` 联网刷新） |
 | `agile template update [--registry url]` | 强制刷新缓存 |
 | `agile template check [--registry url]` | 注册中心一致性校验（CI 用） |
 | `agile init project <name> --template <模板名>` | 用模板生成项目 |
