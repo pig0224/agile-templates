@@ -8,7 +8,7 @@
 ## 用户视角
 
 ```bash
-npm i -g @fcc/agile-cli
+npm i -g fcc-agile-cli
 agile template list                 # 列出全部模板（拉取/更新缓存）
 agile init project order-service --template go-service
 agile template update               # 强制刷新模板缓存
@@ -49,4 +49,4 @@ agile template update               # 强制刷新模板缓存
 
 ## License
 
-[MIT](./LICENSE) © fcc-agile contributors
+[MIT](./LICENSE) © fcc contributors

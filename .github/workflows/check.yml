@@ -19,8 +19,8 @@ jobs:
       - name: Check registry consistency
         run: node scripts/check.mjs
 
-      # CLI 发版后可启用（npm i -g @fcc/agile-cli 走完整校验）：
+      # CLI 发版后可启用（npm i -g fcc-agile-cli 走完整校验）：
       # - name: Check via agile CLI
       #   run: |
-      #     npm install -g @fcc/agile-cli
+      #     npm install -g fcc-agile-cli
       #     agile template check --registry "$GITHUB_WORKSPACE"
