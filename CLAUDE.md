@@ -1,0 +1,41 @@
+# CLAUDE.md — agile-templates 仓库导航
+
+本仓库是 **agile CLI 的项目模板注册中心**：`registry.yaml` 声明全部模板，**新增模板无需升级 [agile-cli](https://github.com/fcc-agile/agile-cli)**。以 git 仓库分发，推送即发版，无需 npm、无需构建。
+
+## 常用命令
+
+```bash
+node scripts/check.mjs                   # 注册中心一致性校验（CI 同款，无外部依赖）
+```
+
+用户侧（CLI）：
+
+```bash
+agile template list --registry <本仓库地址>
+agile init project <name> --template <模板名>
+```
+
+## 结构
+
+```
+registry.yaml          # 注册中心：name → { description, language, framework, path }
+vue3-vite/             # 每个模板一个目录（目录名 = 模板名）
+react-vite/  go-service/  java-springboot/  node-lib/
+docs/registry.md       # 命名规范与防冲突设计
+scripts/check.mjs      # 自含校验脚本
+```
+
+## 关键约定（防冲突，CLI 与 scripts/check.mjs 双重强制）
+
+1. 模板名 `^[a-z][a-z0-9-]*$`，全局唯一
+2. **目录名必须与 registry.yaml 登记名完全一致**（一目录一身份）
+3. `path` 缺省 `./<name>`；禁止绝对路径 / `..` 越界
+4. 同一目录不得被多个 name 引用；YAML 重复键直接报错
+
+命名模式 `<技术栈>-<变体>`：`vue3-vite`、`go-service`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`。
+
+## 模板内容约定
+
+- 占位符：`{{name}}`（项目名）、`{{safeName}}`（Java 包名等安全段），文本文件与目录名都替换
+- README 必须写清运行/测试命令（CLI 与插件依赖此约定执行测试）
+- 至少包含一个可运行测试（TDD 起点）
