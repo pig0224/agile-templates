@@ -1,6 +1,6 @@
 # 模板注册中心设计
 
-> 项目模板以独立 git 仓库（本仓库）分发，[agile CLI](https://github.com/pig0224/agile-cli) 通过 clone 本仓库读取 `registry.yaml`。**新增模板无需升级 CLI**。CLI 侧实现见其 `src/core/template-registry.ts`。
+> 项目模板以独立 git 仓库（本仓库）分发，[Agile CLI](https://github.com/pig0224/agile-cli) 通过 clone 本仓库读取 `registry.yaml`。**新增模板无需升级 CLI**。CLI 侧实现见其 `src/core/template-registry.ts`。
 
 ## 1. 仓库结构
 
