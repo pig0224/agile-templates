@@ -1,0 +1,41 @@
+version: 1
+
+# 模板注册中心：name → 模板目录（CLI 通过 git clone 本仓库读取此文件）
+#
+# 约定（保证模板名可寻址、不冲突）：
+#   1. name 唯一，格式 ^[a-z][a-z0-9-]*$（小写字母开头，仅小写字母/数字/连字符）
+#   2. name = 模板目录名（缺省 path 时取 ./<name>，显式声明也必须一致）
+#   3. 新增模板 = 新建目录 + 在此登记，CLI 无需任何改动
+#   4. 命名建议 <技术栈/框架>-<变体>：vue3-vite、go-service、java-springboot
+#      后续扩展：vue3-nuxt、go-grpc、node-cli …
+#
+templates:
+  vue3-vite:
+    description: Vue 3 + Vite + TypeScript 前端项目
+    language: TypeScript
+    framework: Vue
+    path: ./vue3-vite
+
+  react-vite:
+    description: React 19 + Vite + TypeScript 前端项目
+    language: TypeScript
+    framework: React
+    path: ./react-vite
+
+  go-service:
+    description: Go HTTP 服务（net/http + 标准库）
+    language: Go
+    framework: stdlib
+    path: ./go-service
+
+  java-springboot:
+    description: Spring Boot 3 (Java 21, Maven) 服务
+    language: Java
+    framework: Spring Boot
+    path: ./java-springboot
+
+  node-lib:
+    description: Node.js (TypeScript) 库项目
+    language: TypeScript
+    framework: Node
+    path: ./node-lib
