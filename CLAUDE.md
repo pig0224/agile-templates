@@ -1,6 +1,6 @@
 # CLAUDE.md — agile-templates 仓库导航
 
-本仓库是 **agile CLI 的项目模板注册中心**：`registry.yaml` 声明全部模板，**新增模板无需升级 [agile-cli](https://github.com/fcc-agile/agile-cli)**。以 git 仓库分发，推送即发版，无需 npm、无需构建。
+本仓库是 **agile CLI 的项目模板注册中心**：`registry.yaml` 声明全部模板，**新增模板无需升级 [agile-cli](https://github.com/pig0224/agile-cli)**。以 git 仓库分发，推送即发版，无需 npm、无需构建。
 
 ## 常用命令
 
