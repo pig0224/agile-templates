@@ -11,7 +11,7 @@
     "test": "node --test dist/**/*.test.js || echo 'no tests yet'"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
