@@ -21,7 +21,7 @@ CLI 侧命令：
 | `agile template list [--registry url] [--refresh] [--json]` | 列出模板（默认读本地缓存，`--refresh` 联网刷新） |
 | `agile template update [--registry url]` | 强制刷新缓存 |
 | `agile template check [--registry url]` | 注册中心一致性校验（CI 用） |
-| `agile init project <name> --template <模板名>` | 用模板生成项目 |
+| `agile init project <name> [--template <模板名>]` | 用模板生成项目（缺省为空项目骨架） |
 
 模板源解析优先级：`--registry` 参数 > `workspace.yaml templates.registry`（init workspace 时写入，默认官方地址，可指向团队私有仓库）。
 
