@@ -1,6 +1,6 @@
 # {{name}}
 
-Go 项目，由 `agile init project --type go` 生成。
+Go 项目，由 `agile init project <name> --template go-service` 生成。
 
 ## 开发
 

@@ -19,8 +19,17 @@ node scripts/check.mjs                   # 注册中心一致性校验（CI 同�
 用户侧（CLI）：
 
 ```bash
-agile template list --registry <本仓库地址>
-agile init project <name> --template <模板名>
+agile template list                                # 列出模板（workspace 内外均可；默认读缓存）
+agile init project <name> --template <模板名>      # 用模板生成项目
+```
+
+本地调试本仓库模板（模板源直读本地路径，不走缓存）：
+
+```bash
+mkdir ../tpl-check && cd ../tpl-check
+agile init workspace
+agile config set template-repo <本仓库绝对路径>
+agile template list
 ```
 
 ## 结构

@@ -1,6 +1,6 @@
 # {{name}}
 
-Node.js (TypeScript) 项目，由 `agile init project --type node` 生成。
+Node.js (TypeScript) 项目，由 `agile init project <name> --template node-lib` 生成。
 
 ## 开发
 

@@ -8,8 +8,15 @@
 git clone git@github.com:pig0224/agile-templates.git
 cd agile-templates
 node scripts/check.mjs              # 注册中心一致性校验（零依赖）
-# 本地调试（CLI 侧）：
-agile template list --registry /path/to/agile-templates
+```
+
+本地调试（CLI 侧）——临时 workspace + 模板源指向本仓库路径（直读，不走缓存）：
+
+```bash
+mkdir ../tpl-check && cd ../tpl-check
+agile init workspace
+agile config set template-repo /path/to/agile-templates
+agile template list
 ```
 
 ## 新增一个模板

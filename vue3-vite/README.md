@@ -1,6 +1,6 @@
 # {{name}}
 
-Vue 3 + Vite + TypeScript 项目，由 `agile init project --template vue3-vite` 生成。
+Vue 3 + Vite + TypeScript 项目，由 `agile init project <name> --template vue3-vite` 生成。
 
 ## 开发
 

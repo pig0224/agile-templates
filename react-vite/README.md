@@ -1,6 +1,6 @@
 # {{name}}
 
-React 19 + Vite + TypeScript 项目，由 `agile init project --template react-vite` 生成。
+React 19 + Vite + TypeScript 项目，由 `agile init project <name> --template react-vite` 生成。
 
 ## 开发
 

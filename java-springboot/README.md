@@ -1,6 +1,6 @@
 # {{name}}
 
-Spring Boot 3 (Java 21, Maven) 项目，由 `agile init project --type java` 生成。
+Spring Boot 3 (Java 21, Maven) 项目，由 `agile init project <name> --template java-springboot` 生成。
 
 ## 开发
 

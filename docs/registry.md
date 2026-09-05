@@ -14,16 +14,16 @@ agile-templates/          # 可整体拆出为独立 git 仓库
 └── node-lib/
 ```
 
-CLI 侧命令：
+CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配置）：
 
 | 命令 | 说明 |
 |---|---|
-| `agile template list [--registry url] [--refresh] [--json]` | 列出模板（默认读本地缓存，`--refresh` 联网刷新） |
-| `agile template update [--registry url]` | 强制刷新缓存 |
-| `agile template check [--registry url]` | 注册中心一致性校验（CI 用） |
+| `agile template list` | 列出模板（默认读本地缓存；workspace 外自动用内置官方源） |
+| `agile template update` | 强制刷新缓存到注册中心远端最新 |
+| `agile template clean` | 清理全部模板缓存（下次使用自动重新克隆） |
 | `agile init project <name> [--template <模板名>]` | 用模板生成项目（缺省为空项目骨架） |
 
-模板源解析优先级：`--registry` 参数 > `workspace.yaml templates.registry`（init workspace 时写入，默认官方地址，可指向团队私有仓库）。
+模板源解析：workspace 内读 `.agile/settings.json` 的 `templates.registry`（init workspace 时写入，默认官方地址，`agile config set template-repo <git-url>` 可换团队私有仓库或本地路径）；workspace 外用内置官方源。指向本地目录时**直读不走缓存**（本地调试模板用）。
 
 ## 2. 命名规范与防冲突设计
 
@@ -57,7 +57,7 @@ CLI 侧命令：
 - `{{name}}` → 项目名（用户输入，保留大小写与连字符）
 - `{{safeName}}` → 小写字母数字折叠（Java 包名等场景）
 
-**git 语义**：模板仓库自身的 `.gitignore` 等不影响生成项目；脚手架生成后 CLI 会 `git init` + 初始提交再挂载为 submodule（详见 [sync-engine.md](./sync-engine.md)）。
+**git 语义**：模板仓库自身的 `.gitignore` 等不影响生成项目；生成项目是 workspace 单仓内的**普通目录**，CLI 生成后 `git init` + `git add` 纳入 workspace 版本管理（不自动 commit）。
 
 **模板质量要求**（PR 检查项）：
 - 每个 README 说明运行/测试命令（CLI 与插件依赖此约定执行测试）
