@@ -24,7 +24,7 @@ agile template list
 1. 新建目录 `<模板名>/`（命名 `^[a-z][a-z0-9-]*$`，模式 `<技术栈>-<变体>`）
 2. 在 `registry.yaml` 的 `templates:` 登记（`path` 缺省 `./<name>`）
 3. 模板内容要求：
-   - 根目录含构建特征文件（package.json / go.mod / pom.xml / tsconfig.json）
+   - 根目录建议含构建特征文件（如 package.json / go.mod / pom.xml）——插件按其发现测试/构建命令；非强制清单（check.mjs 不校验）
    - 占位符 `{{name}}` / `{{safeName}}`（文本文件与目录名都会替换）
    - 至少一个可运行测试 + 写明运行/测试命令的 README
    - 清单类文件含占位符时注意（如 go.mod），详见 docs/registry.md
