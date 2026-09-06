@@ -7,6 +7,8 @@
  *   3. 目录 basename === 模板名（一目录一身份）
  *   4. 同一目录不被多个模板引用
  *   5. registry.yaml 重复键检测
+ *   6. 项目级规范骨架：每模板必须自带 CLAUDE.md + docs/conventions.md + docs/architecture.md
+ *      （init project 生成项目时随模板带出，作为项目级规范入口）
  * 退出码：0 = 通过；1 = 存在问题
  */
 import fs from 'node:fs/promises';
@@ -98,6 +100,15 @@ async function main() {
       issues.push(`模板 ${name} 与 ${owner} 指向同一目录 ${rel}（不允许）`);
     } else {
       seenDirs.set(dir, name);
+    }
+    for (const relFile of ['CLAUDE.md', 'docs/conventions.md', 'docs/architecture.md']) {
+      const exists = await fs
+        .stat(path.join(dir, relFile))
+        .then((s) => s.isFile())
+        .catch(() => false);
+      if (!exists) {
+        issues.push(`模板 ${name} 缺少项目级规范骨架文件：${relFile}`);
+      }
     }
   }
 
