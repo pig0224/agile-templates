@@ -11,9 +11,9 @@ Node.js（≥ 20）+ TypeScript 库（模板 node-lib 生成）
 
 | 命令 | 用途 |
 |---|---|
-| `npm run build` | 编译 src/ → dist/（test 针对编译产物，**先 build 再 test**） |
+| `npm run build` | 编译 src/ → dist/（测试针对编译产物） |
 | `npm run typecheck` | 仅类型检查 |
-| `npm test` | node:test 跑 dist/ 下的 *.test.js |
+| `npm test` | 自动先 build，再用 node:test 跑 dist/ 下全部用例 |
 
 ## 硬规则
 

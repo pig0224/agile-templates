@@ -10,6 +10,7 @@
 src/
 ├── main.ts        # 应用入口
 ├── App.vue        # 根组件
+├── App.spec.ts    # 根组件单测（占位，TDD 时替换）
 └── env.d.ts       # 环境类型声明
 e2e/
 └── smoke.spec.ts  # 关键路径冒烟

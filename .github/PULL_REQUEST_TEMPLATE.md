@@ -10,6 +10,6 @@
 
 ## 自查清单
 
-- [ ] CI 通过（typecheck / test / build）
+- [ ] CI 通过（check.mjs 规范校验）
 - [ ] 变更已人工审阅（git diff 逐文件确认）
 - [ ] 文档已同步（README / 文档站，如涉及）

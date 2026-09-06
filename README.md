@@ -42,7 +42,7 @@ agile template update               # 强制刷新模板缓存
 - 未来支持多模板源时，限定名为 `<source>:<name>` 消除跨源同名
 
 **变量替换**：脚手架生成时对文本文件做占位符替换（含目录名）：
-- `{{name}}` → 项目名（用户输入）
+- `{{name}}` → 项目名（用户输入，CLI 校验 `^[a-z][a-z0-9-]*$`——占位符只应出现在该格式合法的位置）
 - `{{safeName}}` → 小写字母数字安全段（Java 包名等场景）
 
 **缓存**：CLI 将本仓库克隆到 `~/.agile/templates/<url-hash>`（用户级，跨 workspace 共享），默认读缓存，`agile template update` 时联网刷新，失联降级使用本地缓存。workspace 外执行 `agile template list` / `agile template update` 自动使用内置官方模板源。

@@ -2,6 +2,8 @@ name: Check
 
 on: [pull_request]
 
+# CI 定位：只校验注册中心规范（check.mjs），不构建/不测试模板内容。
+# 模板内容质量由模板自身测试与使用方流程保障，见 CLAUDE.md「关键约定」。
 jobs:
   check:
     name: Validate template registry
@@ -15,8 +17,3 @@ jobs:
 
       - name: Check registry consistency
         run: node scripts/check.mjs
-
-      - name: Check via agile CLI
-        run: |
-          npm install -g fcc-agile-cli
-          agile template check --registry "$GITHUB_WORKSPACE"

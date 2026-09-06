@@ -5,7 +5,7 @@ const title = '{{name}}';
 <template>
   <main class="app">
     <h1>{{ title }}</h1>
-    <p>由 agile init project --type vue 生成</p>
+    <p>由 agile init project &lt;name&gt; --template vue3-vite 生成</p>
   </main>
 </template>
 

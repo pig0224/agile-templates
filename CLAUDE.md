@@ -49,6 +49,8 @@ scripts/check.mjs      # 自含校验脚本
 3. `path` 缺省 `./<name>`；禁止绝对路径 / `..` 越界
 4. 同一目录不得被多个 name 引用；YAML 重复键直接报错
 
+> 注：第 1–4 项由 CLI（validateTemplateRepo）与 check.mjs 双重强制；第 5 项（YAML 重复键）、第 6 项（规范骨架三文件）与第 7 项（目录↔登记双向完整性）**仅 check.mjs 强制**，勿误以为 CLI 也会拦。CI 同样只跑 check.mjs（模板内容不做 CI 构建/测试）。
+
 命名模式 `<技术栈>-<变体>`：`vue3-vite`、`go-service`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`。
 
 ## 模板内容约定
