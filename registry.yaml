@@ -2,40 +2,55 @@ version: 1
 
 # 模板注册中心：name → 模板目录（CLI 通过 git clone 本仓库读取此文件）
 #
-# 约定（保证模板名可寻址、不冲突）：
-#   1. name 唯一，格式 ^[a-z][a-z0-9-]*$（小写字母开头，仅小写字母/数字/连字符）
-#   2. name = 模板目录名（缺省 path 时取 ./<name>，显式声明也必须一致）
-#   3. 新增模板 = 新建目录 + 在此登记，CLI 无需任何改动
-#   4. 命名建议 <技术栈/框架>-<变体>：vue3-vite、go-service、java-springboot
-#      后续扩展：vue3-nuxt、go-grpc、node-cli …
+# 仓库布局（本布局需 agile-cli ≥ 2.1.0；2.0.x 兼容根一级目录 ./<name>）：
+#   singles/<模板名>/            # 单例模板（一个模板一个完整项目骨架）
+#   solutions/<组合名>/<成员名>/  # 组合专属成员模板（成员 = 完整项目骨架，可组合级定制，不引用 singles）
+#
+# 约定（保证名字可寻址、全局唯一——init 后全部平铺落盘 projects/，同一命名空间）：
+#   1. 模板名 / 组合名 / 成员名三段全局唯一（互不重名），格式 ^[a-z][a-z0-9-]*$
+#      （小写字母开头，仅小写字母/数字/连字符）
+#   2. 模板目录 = singles/<name>（或旧布局根一级 ./<name>），目录名必须 === name
+#   3. 新增单例模板 = 新建 singles/<name>/ 目录 + 在此登记；新增组合 = 新建
+#      solutions/<组合名>/<每个成员名>/ 目录（成员为完整模板骨架）+ 在 solutions 段登记
+#   4. 命名建议：模板 <技术栈/框架>-<变体>（vue3-vite、go-service）；组合 <系统域>-<定位>（admin-base）
+#
+# 组合模板（solutions 段，可选；技术栈模板之上的声明式组合层——一次 init 平铺生成多个成员项目）：
+#   1. 组合名唯一且不得与任何模板名/其他组合名/成员名重名
+#   2. members = 成员名清单平铺字符串，逗号分隔（如 backend,frontend），顺序 = 生成顺序
+#   3. 每个成员必须存在 solutions/<组合名>/<成员名>/ 目录（组合专属完整模板骨架），
+#      组合目录下的子目录也必须全部登记进 members（双向一致，check.mjs 与 CLI 双重校验）
+#   4. 用法：agile init project <系统标签> --template <组合名>
+#      成员平铺落盘 projects/<成员名>/（<系统标签> 仅为输出汇报，不落目录），成员项目
+#      {{name}} = 实际落地目录名（平铺目录名全局唯一，包名天然唯一）；
+#      --member <成员名>=<目录名> 可在生成时覆盖成员目录名（{{name}} 随实际目录名）
 #
 templates:
   vue3-vite:
     description: Vue 3 + Vite + TypeScript 前端项目
     language: TypeScript
     framework: Vue
-    path: ./vue3-vite
+    path: ./singles/vue3-vite
 
   react-vite:
     description: React 19 + Vite + TypeScript 前端项目
     language: TypeScript
     framework: React
-    path: ./react-vite
+    path: ./singles/react-vite
 
   go-service:
     description: Go HTTP 服务（net/http + 标准库）
     language: Go
     framework: stdlib
-    path: ./go-service
+    path: ./singles/go-service
 
   java-springboot:
     description: Spring Boot 3 (Java 21, Maven) 服务
     language: Java
     framework: Spring Boot
-    path: ./java-springboot
+    path: ./singles/java-springboot
 
   node-lib:
     description: Node.js (TypeScript) 库项目
     language: TypeScript
     framework: Node
-    path: ./node-lib
+    path: ./singles/node-lib
