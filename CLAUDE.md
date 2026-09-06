@@ -60,4 +60,5 @@ scripts/check.mjs      # 自含校验脚本
   - `CLAUDE.md`：项目级入口索引（技术栈 / 命令速查 / 硬规则 / 规范索引）；团队规范段写 `../../biz-tech-docs/` 并带**「⛔ 栈领域待人工确认」**标记——AI 首次在项目工作时列出 `frameworks/` 实际目录，经人工确认后改写为具体领域（不预写死栈路径）
   - `docs/conventions.md`：目录 / 命名 / 测试默认值（如实描述模板初始骨架 + 增长建议）+ 团队补充约定节
   - `docs/architecture.md`：ADR 骨架（背景 / 决策 / 后果三段式）+ ADR-001 初始条目
+- 前端模板（vue3-vite / react-vite）附赠 `docs/ui.md`：UI 设计 token 与使用规则骨架（**非强制校验**，经 `/agile:init` 约定问答填充）
 - 预填内容必须与模板实际一致：命令速查对齐 package.json scripts / Makefile 目标；不臆造模板没有的目录结构

@@ -24,7 +24,7 @@ Vue 3 + Vite + TypeScript（模板 vue3-vite 生成）
 
 ## 规范索引
 
-- 本项目约定：[docs/conventions.md](docs/conventions.md)（目录 / 命名 / 测试）、[docs/architecture.md](docs/architecture.md)（架构决策 ADR）
+- 本项目约定：[docs/conventions.md](docs/conventions.md)（目录 / 命名 / 测试）、[docs/architecture.md](docs/architecture.md)（架构决策 ADR）、[docs/ui.md](docs/ui.md)（UI 设计 token 与使用规则）
 - 团队规范：`../../biz-tech-docs/`——**⛔ 栈领域待人工确认**：AI 首次在本项目工作时，列出 `biz-tech-docs/frameworks/` 实际存在的目录供人工确认，确认后把本行改写为具体领域（如 `frameworks/vue/`，附确认人与日期）；**未确认前只引用通用领域，不混入其他技术栈**。路径以 `.agile/settings.json` 的 `paths` 为准
 - 公司硬规范：`../../tech-specs/`
 - 上层无匹配领域 → 显式提示缺口（`/agile:knowledge capture` 沉淀或 tech-specs 提案），不臆造
