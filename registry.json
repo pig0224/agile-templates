@@ -1,0 +1,37 @@
+{
+  "$schema": "./registry.schema.json",
+  "version": 2,
+  "singles": [
+    {
+      "name": "vue3-vite",
+      "description": "Vue 3 + Vite + TypeScript 前端项目",
+      "language": ["TypeScript"],
+      "framework": ["Vue"]
+    },
+    {
+      "name": "react-vite",
+      "description": "React 19 + Vite + TypeScript 前端项目",
+      "language": ["TypeScript"],
+      "framework": ["React"]
+    },
+    {
+      "name": "go-service",
+      "description": "Go HTTP 服务（net/http + 标准库）",
+      "language": ["Go"],
+      "framework": ["stdlib"]
+    },
+    {
+      "name": "java-springboot",
+      "description": "Spring Boot 3 (Java 21, Maven) 服务",
+      "language": ["Java"],
+      "framework": ["Spring Boot"]
+    },
+    {
+      "name": "node-lib",
+      "description": "Node.js (TypeScript) 库项目",
+      "language": ["TypeScript"],
+      "framework": ["Node"]
+    }
+  ],
+  "solutions": []
+}

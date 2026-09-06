@@ -1,13 +1,13 @@
 # 模板注册中心设计
 
-> 项目模板以独立 git 仓库（本仓库）分发，[Agile CLI](https://github.com/pig0224/agile-cli) 通过 clone 本仓库读取 `registry.yaml`。**新增模板无需升级 CLI**。本布局需 CLI ≥ 2.1.0（2.0.x 兼容根一级目录 `./<name>` 的旧布局）。CLI 侧实现见其 `src/core/template-registry.ts`。
+> 项目模板以独立 git 仓库（本仓库）分发，[Agile CLI](https://github.com/pig0224/agile-cli) 通过 clone 本仓库读取 `registry.json`（v2：singles / solutions 全数组、无 path 字段，目录由名字约定派生；`registry.schema.json` 提供字段说明与编辑器校验）。**新增模板无需升级 CLI**。本布局需 CLI ≥ 2.1.0。2.0.x 只认 v1 旧布局（registry.yaml + path 字段）——本仓已删除 registry.yaml，推送即对 2.0.x 停止可用（读模板源报「缺少 registry.yaml」），存量用户需先升级 CLI ≥ 2.1.0。CLI 侧实现见其 `src/core/template-registry.ts`。
 
 ## 1. 仓库结构
 
 ```
 agile-templates/               # 可整体拆出为独立 git 仓库
-├── registry.yaml              # 注册中心：templates（name → { description, language, framework, path }）
-│                              #            + solutions（组合模板：members = 纯成员名清单）
+├── registry.json              # 注册中心 v2：singles / solutions 全数组（条目 = name + description + language?/framework?）
+├── registry.schema.json       # JSON Schema（字段中文说明，编辑器补全校验）
 ├── singles/                   # 单例模板（一个模板一个完整项目骨架）
 │   ├── vue3-vite/
 │   ├── react-vite/
@@ -33,39 +33,44 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 
 ## 2. 命名规范与防冲突设计
 
-**模板如何被找到**：模板名 = registry.yaml 的 key = 模板目录名，三者必须一致。CLI 通过「name → registry 条目 → 目录」一条链定位，无歧义。
+**模板如何被找到**：条目 name = 模板目录名（组合成员 = `solutions/<组合>/<name>/`），两者必须一致。CLI 通过「name → registry 条目 → 目录」一条链定位，无歧义（无 path 字段，杜绝别名指向）。
 
 **init 后的目录形态**：单例与组合成员**全部平铺**落盘 `projects/<目录名>/`（无系统目录层级）——因此模板名 / 组合名 / 成员名处于**同一命名空间**，三段必须全局唯一。
 
 **防冲突五道防线**（`validateTemplateRepo` 运行时强制执行，`init project` 发现任何问题直接拒绝生成）：
 
 1. **命名规范**：`^[a-z][a-z0-9-]*$`（小写字母开头，仅小写字母/数字/连字符）——排除大小写歧义、空格、下划线等易混形态
-2. **key 唯一**：YAML 解析器对重复 key 直接抛错
-3. **目录名 === name**：一个目录一个身份，禁止别名指向同一模板（registry 中两个 name 指向同一目录 → 报错）
-4. **path 合法性**：禁止绝对路径与 `..` 越界，path 必须指向仓库内已存在目录，且为与 name 同名的一级目录（`./<name>` 或 `./singles/<name>`）
-5. **三段全局唯一**：成员名不得与任何模板名 / 组合名 / 其他组合的成员名重名（成员平铺落盘会抢占 `projects/` 顶层目录名）；组合目录 ↔ members 双向一致（缺成员目录 / 幽灵成员目录均报错）
+2. **重复即报错**：JSON 重复键由 check.mjs 显式扫描（JSON.parse 对重复键静默取后者）；singles / solutions / 同组合 projects 数组内 name 重复登记均拒绝（JSON 数组无键唯一性保证，须显式校验）
+3. **目录名 === name**：一个目录一个身份——registry 无 path 字段，目录由名字约定派生（单例 `singles/<name>/`、成员 `solutions/<组合>/<name>/`），杜绝别名指向
+4. **登记与目录双向一致**：登记的模板/成员目录必须实际存在（幽灵登记报错）；组合目录下的子目录必须全部登记进 projects（幽灵成员目录报错，CLI 与 check.mjs 双重）；singles/ 与 solutions/ 整体反向——未登记的目录必须全部登记（幽灵单例/幽灵组合报错，仅 check.mjs 强制）
+5. **三段全局唯一**：成员名不得与任何模板名 / 组合名 / 其他组合的成员名重名（成员平铺落盘会抢占 `projects/` 顶层目录名）；组合目录 ↔ projects 双向一致（缺成员目录 / 幽灵成员目录均报错）
 
 **命名建议**：模板 `<技术栈/框架>-<变体>`（`vue3-vite`、`go-service`、`java-springboot`、`node-lib`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`）；成员名取职责域（`backend`、`frontend`），避开既有模板名。
 
 **未来多模板源**：如需同时接多个模板仓库，限定名 `<source>:<name>` 消除跨源同名（当前单源设计，未启用）。
 
-### 组合模板（solutions 段）
+### 组合模板（solutions 数组）
 
-组合模板 = 技术栈模板之上的**声明式组合层**：一次 `init project` 平铺生成多个成员项目（如通用后台 = 前端 + 后端）。与旧版（v1，成员引用 singles 模板）不同，**成员是组合专属的完整模板骨架**——可为同一职责域在不同组合里做差异化定制（如 admin-base 的 backend 偏管理端、crm-base 的 backend 偏销售漏斗），互不影响 singles。
+组合模板 = 技术栈模板之上的**声明式组合层**：一次 `init project` 平铺生成多个成员项目（如通用后台 = 前端 + 后端）。与 v1 旧版（成员引用 singles 模板）不同，**成员是组合专属的完整模板骨架**——可为同一职责域在不同组合里做差异化定制（如 admin-base 的 backend 偏管理端、crm-base 的 backend 偏销售漏斗），互不影响 singles。
 
-```yaml
-solutions:
-  admin-base:
-    description: 通用后台基础系统
-    members: backend,frontend   # 纯成员名清单，逗号分隔，顺序 = 生成顺序
+```json
+{
+  "name": "admin-base",
+  "description": "通用后台基础系统",
+  "projects": [
+    { "name": "backend", "description": "后端服务（Go）" },
+    { "name": "frontend", "description": "前端应用（Vue 3）" }
+  ]
+}
 ```
 
-- **成员 = 目录**：每个成员必须存在 `solutions/<组合名>/<成员名>/` 目录（完整项目骨架，含规范骨架三文件），组合目录下的子目录也必须全部登记进 members（双向一致，check.mjs 与 CLI 双重校验）
+- **成员条目与 singles 同形状**：`name` + 一句话 `description`（language / framework 可选），`projects` 数组顺序 = 生成顺序
+- **成员 = 目录**：每个成员必须存在 `solutions/<组合名>/<成员名>/` 目录（完整项目骨架，含规范骨架三文件），组合目录下的子目录也必须全部登记进 projects（双向一致，check.mjs 与 CLI 双重校验）
 - **命名**：组合名规范同模板名且**全局唯一**（不得与模板/成员/其他组合重名）；建议 `<系统域>-<定位>`，如 `admin-base`
 - **生成语义**：`agile init project <系统标签> --template <组合名>` 将成员**平铺**落盘 `projects/<成员目录名>/`（`<系统标签>` 仅为输出汇报，不落目录）；成员项目 `{{name}}` = 实际落地目录名（平铺目录名全局唯一，包名天然唯一）；`--member <成员名>=<目录名>` 可覆盖成员目录名
 - **补缺**：已存在的成员目录跳过 + warn（CLI 无法区分「本组合已生成成员」与「同名普通项目」，人工核对；AI 层 `/agile:init` 生成前会先做撞名核对）；补缺按**本次调用的有效成员目录名**判定——覆盖过的成员再跑时须带相同 `--member`
 
-**新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点）→ 在 `solutions` 段登记 `members` → `node scripts/check.mjs` 验证。
+**新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点）→ 在 `solutions` 数组登记组合与 `projects` 成员 → `node scripts/check.mjs` 验证。
 
 ## 3. 缓存机制
 

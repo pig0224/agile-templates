@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FCC-Agile 模板注册中心（registry.json v2）",
+  "description": "模板注册中心声明文件。布局约定：单例模板 = singles/<name>/，组合成员 = solutions/<组合名>/<name>/——目录由名字约定派生，本文件不写 path。三段全局唯一：模板名 / 组合名 / 成员名互不重名（init 后全部平铺落盘 projects/，同一命名空间），格式 ^[a-z][a-z0-9-]*$。数组顺序 = 展示与生成顺序。",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "指向本 schema 文件（./registry.schema.json），编辑器据此提供补全与校验"
+    },
+    "version": {
+      "const": 2,
+      "description": "注册中心格式版本，当前为 2"
+    },
+    "singles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/templateEntry" },
+      "description": "单例模板数组（一个模板一个完整项目骨架）。数组顺序 = agile template list 展示顺序；每个条目须存在 singles/<name>/ 目录"
+    },
+    "solutions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/solutionEntry" },
+      "description": "组合模板数组（技术栈模板之上的声明式组合层，一次 init 平铺生成多个成员项目）。每个组合须存在 solutions/<组合名>/ 目录"
+    }
+  },
+  "$defs": {
+    "templateEntry": {
+      "type": "object",
+      "description": "模板/成员条目（单例与组合成员同形状）",
+      "required": ["name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "名字（小写字母开头，仅小写字母/数字/连字符），即目录名；命名建议 <技术栈/框架>-<变体>（如 vue3-vite、go-service），成员取职责域（如 backend、frontend）"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "一句话职责描述（agile template list 展示）"
+        },
+        "language": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "语言标签数组（可省略），如 [\"TypeScript\"]、[\"Go\"]"
+        },
+        "framework": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "框架/技术栈标签数组（可省略），如 [\"Vue\", \"Vite\"]、[\"Spring Boot\"]"
+        }
+      }
+    },
+    "solutionEntry": {
+      "type": "object",
+      "description": "组合模板条目：成员 = 组合专属完整模板骨架（不引用 singles，可为同一职责域在不同组合里做差异化定制）",
+      "required": ["name", "description", "projects"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "组合名，全局唯一且不得与任何模板名/成员名重名；命名建议 <系统域>-<定位>（如 admin-base）"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "一句话说明该组合生成的系统（agile template list 展示）"
+        },
+        "projects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/templateEntry" },
+          "description": "成员项目数组，条目与 singles 同形状；数组顺序 = 生成顺序；每个成员须存在 solutions/<组合名>/<成员名>/ 目录（组合专属完整骨架），成员名全局唯一"
+        }
+      }
+    }
+  }
+}

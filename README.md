@@ -5,7 +5,7 @@
 
 📖 **完整文档**：https://pig0224.github.io/agile-docs/ （模板使用 / 开发指南 / 发布）
 
-[Agile CLI](https://github.com/pig0224/agile-cli) 的**项目模板源**：`registry.yaml` 声明全部模板。**新增模板无需升级 CLI** —— 新建目录 + 登记 registry.yaml 即可。以 git 仓库分发，推送即发版，无需 npm、无需构建。
+[Agile CLI](https://github.com/pig0224/agile-cli) 的**项目模板源**：`registry.json` 声明全部模板。**新增模板无需升级 CLI** —— 新建目录 + 登记 registry.json 即可。以 git 仓库分发，推送即发版，无需 npm、无需构建。
 
 ## 用户视角
 
@@ -19,7 +19,8 @@ agile template update               # 强制刷新模板缓存
 ## 目录结构
 
 ```
-├── registry.yaml               # 注册中心：templates + solutions（组合模板）
+├── registry.json               # 注册中心 v2：singles / solutions 全数组（条目 = name + description + language?/framework?）
+├── registry.schema.json        # JSON Schema（字段中文说明，编辑器补全校验）
 ├── singles/                    # 单例模板（一个模板一个完整项目骨架，目录名 = 模板名）
 │   ├── vue3-vite/
 │   ├── react-vite/
@@ -33,13 +34,13 @@ agile template update               # 强制刷新模板缓存
 ## 新增一个单例模板
 
 1. 新建目录 `singles/<模板名>/`，放入项目骨架文件
-2. 在 `registry.yaml` 的 `templates:` 下登记（`path` 为 `./singles/<模板名>`）
+2. 在 `registry.json` 的 `singles` 数组登记 `{ "name": "<模板名>", "description": "一句话职责", "language": [...], "framework": [...] }`（language/framework 可省略；无 path 字段，目录由名字派生）
 3. `node scripts/check.mjs` 本地校验通过后提交推送，即完成发版
 
 ## 新增一个组合模板
 
 1. 为每个成员新建 `solutions/<组合名>/<成员名>/`（组合专属完整模板骨架，可复制单例模板作起点定制）
-2. 在 `registry.yaml` 的 `solutions:` 下登记 `members: 成员名清单`（如 `backend,frontend`）
+2. 在 `registry.json` 的 `solutions` 数组登记组合（`description` + `projects` 成员数组，条目与 singles 同形状；数组顺序 = 生成顺序）
 3. `node scripts/check.mjs` 本地校验通过后提交推送
 
 ## 模板约定
@@ -48,7 +49,7 @@ agile template update               # 强制刷新模板缓存
 - 格式 `^[a-z][a-z0-9-]*$`
 - **模板名 / 组合名 / 成员名三段全局唯一**（init 后全部平铺落盘 `projects/`，同一命名空间）
 - 命名模式：模板 `<技术栈/框架>-<变体>`（`vue3-vite`、`go-service`…）；组合 `<系统域>-<定位>`（`admin-base`…）
-- **目录名必须与 registry.yaml 中的 name 完全一致**（CLI 与 check 脚本双重强制校验，不一致直接拒绝）
+- **目录名必须与 registry.json 中的 name 完全一致**（无 path 字段，目录由名字派生；CLI 与 check 脚本双重强制校验，不一致直接拒绝）
 - 未来支持多模板源时，限定名为 `<source>:<name>` 消除跨源同名
 
 **变量替换**：脚手架生成时对文本文件做占位符替换（含目录名）：
