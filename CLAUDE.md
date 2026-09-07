@@ -66,4 +66,4 @@ scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构
   - `docs/architecture.md`：ADR 骨架（背景 / 决策 / 后果三段式）+ ADR-001 初始条目
 - 前端模板（vue3-vite / react-vite）附赠 `docs/ui.md`：UI 设计 token 与使用规则骨架（**非强制校验**，经 `/agile:init` 约定问答填充）
 - 预填内容必须与模板实际一致：命令速查对齐 package.json scripts / Makefile 目标；不臆造模板没有的目录结构
-- **新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点，按组合需求定制）→ 在 registry.json 的 `solutions` 数组登记组合与 `projects` 成员 → `node scripts/check.mjs` 验证双向一致
+- **新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点，按组合需求定制；仓库无对应技术栈单例的成员从零手写，勿强行复制不相干基座）→ 在 registry.json 的 `solutions` 数组登记组合与 `projects` 成员 → `node scripts/check.mjs` 验证双向一致
