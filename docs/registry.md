@@ -45,6 +45,8 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 4. **登记与目录双向一致**：登记的模板/成员目录必须实际存在（幽灵登记报错）；组合目录下的子目录必须全部登记进 projects（幽灵成员目录报错，CLI 与 check.mjs 双重）；singles/ 与 solutions/ 整体反向——未登记的目录必须全部登记（幽灵单例/幽灵组合报错，仅 check.mjs 强制）
 5. **三段全局唯一**：成员名不得与任何模板名 / 组合名 / 其他组合的成员名重名（成员平铺落盘会抢占 `projects/` 顶层目录名）；组合目录 ↔ projects 双向一致（缺成员目录 / 幽灵成员目录均报错）
 
+此外 `scripts/check.mjs` 还强制**根一级目录白名单**（仅允许 singles / solutions / docs / scripts 与隐藏目录，其余报错——新增顶层目录须改 check.mjs 白名单）与模板内容卫生校验（见 §4）。
+
 **命名建议**：模板 `<技术栈/框架>-<变体>`（`vue3-vite`、`go-service`、`java-springboot`、`node-lib`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`）；成员名取职责域（`backend`、`frontend`），避开既有模板名。
 
 **未来多模板源**：如需同时接多个模板仓库，限定名 `<source>:<name>` 消除跨源同名（当前单源设计，未启用）。
@@ -91,13 +93,12 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 
 **git 语义**：模板仓库自身的 `.gitignore` 等不影响生成项目；生成项目是 workspace 单仓内的**普通目录**，CLI 生成后逐项目 `git add` 纳入 workspace 版本管理（不自动 commit）。
 
-**模板质量要求**（PR 检查项；前三条由 `scripts/check.mjs` 强制校验，违规即 CI 红）：
+**模板质量要求**（PR 检查项；其中无产物入库 / package.json 占位符 / README 测试命令 / 项目级规范骨架三文件由 `scripts/check.mjs` 强制校验，违规即 CI 红）：
 - **无产物入库**：`singles/` 与 `solutions/` 全树不得出现安装/构建产物——目录 `node_modules` / `.next` / `dist` / `build` / `coverage` / `.turbo` / `.vitest`，文件 `pnpm-lock.yaml` / `package-lock.json` / `yarn.lock` / `*.tsbuildinfo`；符号链接/junction 一并报错。跑完 install/build/test 后清理再提交；确需携带的特例在 `scripts/check.mjs` 顶部 `ALLOWED_ARTIFACTS` 人工显式登记（默认空，不做自动豁免）
 - **package.json 占位符**：含 `package.json` 的模板/成员，`name` 必须严格为 `{{name}}`（防固定名、防占位符被误替换后提交）
 - **README 测试命令**：每个 README 说明运行/测试命令（CLI 与插件依赖此约定执行测试）——`scripts/check.mjs` 以宽松正则校验测试命令存在性（npm/pnpm/yarn/make/go/mvn 形态；定位为防呆，允许漏报不允许误伤）
-
-**产物忽略**：模板目录里的安装/构建产物（`node_modules`、`dist`、`.next` 等）、符号链接/junction 与锁文件（`pnpm-lock.yaml` 等）不会进入生成项目——CLI 复制时自动忽略并逐项 warn 提示（本地调试期间无需清理产物）。但**提交入库前应清理**（`/agile:add-template` ③ 出口检查含清单与命令）——保持模板仓无产物是建设基线，勿依赖 CLI 的复制防御积累产物（CLI ≤ 2.1.0 直读含产物模板仓会崩溃）。
-
 - 至少包含一个可运行的测试（TDD 起点模板）
 - Java 模板的包目录用 `{{safeName}}` 占位
-- **项目级规范骨架三文件**（缺一不可，`scripts/check.mjs` 强制校验，单例模板与组合成员模板同标准）：`CLAUDE.md`（项目级入口索引：技术栈 / 命令速查 / 硬规则 / 规范索引，其中团队规范段带「⛔ 待人工确认」标记）、`docs/conventions.md`（目录 / 命名 / 测试默认值 + 团队补充约定节）、`docs/architecture.md`（ADR 骨架）——`init project` 生成项目时随模板带出，作为项目级规范的基础入口；前端模板（vue3-vite / react-vite）另附 `docs/ui.md`（UI 设计 token 与使用规则骨架，**非强制校验**，经 `/agile:init` 约定问答填充）
+- **项目级规范骨架三文件**（缺一不可，`scripts/check.mjs` 强制校验，单例模板与组合成员模板同标准）：`CLAUDE.md`（项目级入口索引：技术栈 / 命令速查 / 硬规则 / 规范索引，其中团队规范段带「⛔ 栈领域待人工确认」标记）、`docs/conventions.md`（目录 / 命名 / 测试默认值 + 团队补充约定节）、`docs/architecture.md`（ADR 骨架）——`init project` 生成项目时随模板带出，作为项目级规范的基础入口；前端模板（vue3-vite / react-vite）另附 `docs/ui.md`（UI 设计 token 与使用规则骨架，**非强制校验**，经 `/agile:init` 约定问答填充）
+
+**产物忽略**：模板目录里的安装/构建产物（`node_modules`、`dist`、`.next` 等）、符号链接/junction 与锁文件（`pnpm-lock.yaml` 等）不会进入生成项目——CLI 复制时自动忽略并逐项 warn 提示（本地调试期间无需清理产物）。但**提交入库前应清理**（`/agile:add-template` ③ 出口检查含清单与命令）——保持模板仓无产物是建设基线，勿依赖 CLI 的复制防御积累产物（CLI ≤ 2.1.0 直读含产物模板仓会崩溃）。

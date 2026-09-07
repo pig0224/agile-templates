@@ -114,9 +114,9 @@ async function checkPkgName(label, dir, issues) {
     issues.push(`${label} 的 package.json 不是合法的 JSON：${e.message}`);
     return;
   }
-  if (pkg?.name !== '{{name}}') {
+  if (!isObj(pkg) || pkg.name !== '{{name}}') {
     issues.push(
-      `${label} 的 package.json name 必须严格为 "{{name}}"（实际：${JSON.stringify(pkg?.name ?? null)}` +
+      `${label} 的 package.json name 必须严格为 "{{name}}"（实际：${isObj(pkg) ? JSON.stringify(pkg.name ?? null) : JSON.stringify(pkg)}` +
         `——防固定名与占位符被误替换后提交）`,
     );
   }
@@ -131,7 +131,11 @@ async function checkReadmeTest(label, dir, issues) {
     issues.push(`${label} 缺少 README.md（须写明运行/测试命令）`);
     return;
   }
-  const text = await fs.readFile(readme, 'utf8').catch(() => '');
+  const text = await fs.readFile(readme, 'utf8').catch(() => null);
+  if (text === null) {
+    issues.push(`${label} 的 README.md 读取失败`);
+    return;
+  }
   if (!README_TEST_RE.test(text)) {
     issues.push(
       `${label} 的 README.md 未匹配到测试命令（npm/pnpm/yarn [run] test、make test、go test、mvn … test 之一）——README 与 scripts 脱节？`,
