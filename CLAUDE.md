@@ -41,7 +41,7 @@ registry.schema.json        # JSON Schema（字段中文说明；registry.json �
 singles/<模板名>/            # 单例模板（一个模板一个完整项目骨架；目录名 = 模板名）
 solutions/<组合名>/<成员名>/  # 组合专属成员模板（成员 = 完整项目骨架，可组合级定制，不引用 singles）
 docs/registry.md            # 命名规范与防冲突设计（含组合模板）
-scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构/目录/骨架校验）
+scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构/目录/骨架校验 + 模板内容卫生）
 ```
 
 ## 关键约定（防冲突，CLI 与 scripts/check.mjs 双重强制）
@@ -51,7 +51,7 @@ scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构
 3. **重复即报错**：JSON 重复键（check.mjs 扫描——JSON.parse 会静默取后者）；singles / solutions / 同组合 projects 数组内 name 重复登记
 4. **组合模板**：`projects` 为成员条目数组（与 singles 条目同形状：name + description，language / framework 可选），数组顺序 = 生成顺序；登记与成员目录**双向一致**（每个成员须有 `solutions/<组合>/<成员>/` 目录，组合目录下子目录须全部登记）；成员名全局唯一——成员平铺落盘 `projects/` 后直接占用顶层目录名，与模板/组合同命名空间
 
-> 注：第 1–4 项由 CLI（validateTemplateRepo）与 check.mjs 双重强制（含数组重复登记与组合内幽灵成员目录）；JSON 重复键、未知字段（顶层与条目）、规范骨架三文件（单例模板与组合成员模板同标准）、singles/ 与 solutions/ 整体反向完整性（幽灵单例/幽灵组合目录）与根一级目录白名单**仅 check.mjs 强制**，勿误以为 CLI 也会拦。CI 同样只跑 check.mjs（模板内容不做 CI 构建/测试）。
+> 注：第 1–4 项由 CLI（validateTemplateRepo）与 check.mjs 双重强制（含数组重复登记与组合内幽灵成员目录）；JSON 重复键、未知字段（顶层与条目）、规范骨架三文件（单例模板与组合成员模板同标准）、singles/ 与 solutions/ 整体反向完整性（幽灵单例/幽灵组合目录）、根一级目录白名单与模板内容卫生（产物黑名单 / package.json name 占位符 / README 测试命令存在性）**仅 check.mjs 强制**，勿误以为 CLI 也会拦。CI 同样只跑 check.mjs（模板内容不做 CI 构建/测试）。
 
 命名模式：模板 `<技术栈>-<变体>`（`vue3-vite`、`go-service`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`）；组合 `<系统域>-<定位>`（`admin-base`、`crm-base`）；成员名取职责域（`backend`、`frontend`，因全局唯一，避免与既有模板/组合/成员撞名）。
 
