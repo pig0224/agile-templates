@@ -91,6 +91,8 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 
 **git 语义**：模板仓库自身的 `.gitignore` 等不影响生成项目；生成项目是 workspace 单仓内的**普通目录**，CLI 生成后逐项目 `git add` 纳入 workspace 版本管理（不自动 commit）。
 
+**产物忽略**：模板目录里的安装/构建产物（`node_modules`、`dist`、`.next` 等）、符号链接/junction 与锁文件（`pnpm-lock.yaml` 等）不会进入生成项目——CLI 复制时自动忽略并逐项 warn 提示（本地调试模板仓无需清理产物）。
+
 **模板质量要求**（PR 检查项）：
 - 每个 README 说明运行/测试命令（CLI 与插件依赖此约定执行测试）
 - 至少包含一个可运行的测试（TDD 起点模板）
