@@ -13,7 +13,7 @@
  *   7. 项目级规范骨架：CLAUDE.md + docs/conventions.md + docs/architecture.md（单例与成员同标准）
  *   8. 反向完整性（防幽灵静默不可用）：
  *      - singles/ 子目录必须全部登记
- *      - solutions/ 子目录必须全部登记为组合；组合目录下子目录必须全部登记进 projects
+ *      - solutions/ 子目录必须全部登记为组合；组合目录下子目录必须全部登记进 projects（docs/ 豁免——组合根耦合资产目录）
  *      - 根一级目录白名单：singles / solutions / docs / scripts / 隐藏目录，其余报错
  *   9. 三段全局唯一：模板名 / 组合名 / 成员名互不重名（双向校验，含组合名 vs 其他组合的成员名）
  *  10. registry.yaml 已废弃：仓库内不得再保留（v2 起唯一注册中心为 registry.json）
@@ -25,6 +25,11 @@
  *      （防固定名、防占位符被误替换后提交）
  *  13. 模板内容卫生·C README 测试命令：README.md 必须匹配宽松正则（npm/pnpm/yarn [run] test、make test、
  *      go test、mvn … test）——防 README 与 scripts 脱节；定位为防呆，允许漏报不允许误伤；README 缺失一并报错
+ *  14. 组合根耦合资产：组合必须以根级 CLAUDE.md（组合定位/成员清单/耦合资产导航）+ docs/（≥1 篇 .md）
+ *      归总跨成员约定与规范——workspace「1 根 5 抽屉」范式：耦合资产不入成员项目，init 带出到
+ *      .agile/solutions/<组合>/ 后经 /agile:knowledge 按资产类型同步进抽屉（biz-tech-docs / biz-product-docs）；
+ *      每篇 docs/*.md 顶部 frontmatter 须含「类型: tech|product」（同步去向）；组合根资产不做占位替换，
+ *      出现 {{name}}/{{safeName}} 即报错
  *  退出码：0 = 通过；1 = 存在问题
  */
 import fs from 'node:fs/promises';
@@ -139,6 +144,72 @@ async function checkReadmeTest(label, dir, issues) {
   if (!README_TEST_RE.test(text)) {
     issues.push(
       `${label} 的 README.md 未匹配到测试命令（npm/pnpm/yarn [run] test、make test、go test、mvn … test 之一）——README 与 scripts 脱节？`,
+    );
+  }
+}
+
+/** 14. 组合根耦合资产校验：组合必须以根级 CLAUDE.md + docs/（≥1 篇 .md）归总跨成员约定与规范——
+ *  耦合资产不入成员项目（init 平铺后各成员带副本会散落 projects/，违背 workspace「1 根 5 抽屉」范式），
+ *  而是经 init 带出 .agile/solutions/<组合>/ 后由 /agile:knowledge 按资产类型同步进抽屉。
+ *  每篇 docs/*.md 顶部 frontmatter 须含「类型: tech|product」（同步去向：tech → biz-tech-docs，
+ *  product → biz-product-docs；frontmatter 解析容忍文件开头 BOM）；组合根资产不做占位替换，
+ *  含 {{name}}/{{safeName}} 即报错。 */
+const COMBO_PLACEHOLDER_RE = /\{\{(?:name|safeName)\}\}/;
+const COMBO_TYPE_RE = /^类型:\s*(tech|product)\s*$/m;
+const FRONTMATTER_RE = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+
+/** 取 markdown 顶部 frontmatter 块文本（无 frontmatter 块返回 null） */
+function frontmatterOf(text) {
+  const m = FRONTMATTER_RE.exec(text);
+  return m ? m[1] : null;
+}
+
+async function checkComboAssets(name, solDir, issues) {
+  const claudemd = path.join(solDir, 'CLAUDE.md');
+  if (!(await isFile(claudemd))) {
+    issues.push(
+      `组合模板 ${name} 缺少组合根 CLAUDE.md（组合定位 / 成员清单 / 耦合资产导航——跨成员约定与规范归总到组合根，不散落成员项目）`,
+    );
+  } else {
+    const text = await fs.readFile(claudemd, 'utf8').catch(() => null);
+    if (text === null) {
+      issues.push(`组合模板 ${name} 的组合根 CLAUDE.md 读取失败`);
+    } else if (COMBO_PLACEHOLDER_RE.test(text)) {
+      issues.push(
+        `组合模板 ${name} 的组合根 CLAUDE.md 含 {{name}}/{{safeName}} 占位符（组合级资产不做占位替换，与具体落盘目录名无关）`,
+      );
+    }
+  }
+  const docsDir = path.join(solDir, 'docs');
+  if (!(await isDir(docsDir))) {
+    issues.push(
+      `组合模板 ${name} 缺少组合根 docs/（跨成员耦合的约定/规范/知识归总处；仅成员内部自用的约定才留成员项目）`,
+    );
+    return;
+  }
+  let mdCount = 0;
+  for (const ent of await fs.readdir(docsDir, { withFileTypes: true })) {
+    if (!ent.isFile() || !ent.name.endsWith('.md')) continue;
+    mdCount++;
+    const rel = `solutions/${name}/docs/${ent.name}`;
+    const text = await fs.readFile(path.join(docsDir, ent.name), 'utf8').catch(() => null);
+    if (text === null) {
+      issues.push(`组合模板 ${name} 的组合根文档 ${rel} 读取失败`);
+      continue;
+    }
+    if (COMBO_PLACEHOLDER_RE.test(text)) {
+      issues.push(`组合模板 ${name} 的组合根文档 ${rel} 含 {{name}}/{{safeName}} 占位符（组合级资产不做占位替换）`);
+    }
+    const fm = frontmatterOf(text);
+    if (fm === null || !COMBO_TYPE_RE.test(fm)) {
+      issues.push(
+        `组合模板 ${name} 的组合根文档 ${rel} 顶部 frontmatter 缺少「类型: tech」或「类型: product」（/agile:knowledge 按此同步：tech → biz-tech-docs，product → biz-product-docs）`,
+      );
+    }
+  }
+  if (mdCount === 0) {
+    issues.push(
+      `组合模板 ${name} 的组合根 docs/ 下没有任何 .md 文档（组合必有跨成员耦合资产；纯独立项目不应组成组合）`,
     );
   }
 }
@@ -390,17 +461,20 @@ async function main() {
       issues.push(`组合模板名 "${name}" 与组合 ${owner} 的成员项目名冲突（三段全局唯一）`);
     }
 
-    // 反向一致性：solutions/<组合>/ 下的子目录必须全部登记进 projects（防幽灵成员目录）
+    // 反向一致性：solutions/<组合>/ 下的子目录必须全部登记进 projects（防幽灵成员目录）；
+    // docs/ 豁免——组合根耦合资产目录（CLAUDE.md + docs/ 归总跨成员约定与规范），不是成员项目
     const solDir = path.join(repoDir, 'solutions', name);
     if (await isDir(solDir)) {
       for (const ent of await fs.readdir(solDir, { withFileTypes: true })) {
-        if (!ent.isDirectory() || ent.name.startsWith('.')) continue;
+        if (!ent.isDirectory() || ent.name.startsWith('.') || ent.name === 'docs') continue;
         if (!declared.has(ent.name)) {
           issues.push(
             `目录 solutions/${name}/${ent.name}/ 未登记进组合 ${name} 的 projects（登记与成员目录须双向一致）`,
           );
         }
       }
+      // 契约 14：组合根耦合资产两件套（CLAUDE.md + docs/）与资产类型 frontmatter
+      await checkComboAssets(name, solDir, issues);
     }
   }
 
