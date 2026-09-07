@@ -39,7 +39,7 @@ agile template update               # 强制刷新模板缓存
 
 ## 新增一个组合模板
 
-1. 为每个成员新建 `solutions/<组合名>/<成员名>/`（组合专属完整模板骨架，可复制单例模板作起点定制）
+1. 为每个成员新建 `solutions/<组合名>/<成员名>/`（组合专属完整模板骨架，可复制单例模板作起点定制；无相近单例的成员从零手写）
 2. 在 `registry.json` 的 `solutions` 数组登记组合（`description` + `projects` 成员数组，条目与 singles 同形状；数组顺序 = 生成顺序）
 3. `node scripts/check.mjs` 本地校验通过后提交推送
 
