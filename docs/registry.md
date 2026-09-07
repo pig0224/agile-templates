@@ -16,6 +16,8 @@ agile-templates/               # 可整体拆出为独立 git 仓库
 │   └── node-lib/
 └── solutions/                 # 组合模板（可选）：一组合一目录，成员 = 组合专属完整模板
     └── <组合名>/
+        ├── CLAUDE.md          # 组合根导航：组合定位 / 成员清单 / 耦合资产导航
+        ├── docs/              # 跨成员耦合的约定/规范/知识归总处（每篇 frontmatter「类型: tech|product」定同步去向）
         ├── <成员名>/          # 完整项目骨架，可组合级定制（不引用 singles）
         └── ...
 ```
@@ -45,6 +47,8 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 4. **登记与目录双向一致**：登记的模板/成员目录必须实际存在（幽灵登记报错）；组合目录下的子目录必须全部登记进 projects（幽灵成员目录报错，CLI 与 check.mjs 双重）；singles/ 与 solutions/ 整体反向——未登记的目录必须全部登记（幽灵单例/幽灵组合报错，仅 check.mjs 强制）
 5. **三段全局唯一**：成员名不得与任何模板名 / 组合名 / 其他组合的成员名重名（成员平铺落盘会抢占 `projects/` 顶层目录名）；组合目录 ↔ projects 双向一致（缺成员目录 / 幽灵成员目录均报错）
 
+此外 `scripts/check.mjs` 还强制**根一级目录白名单**（仅允许 singles / solutions / docs / scripts 与隐藏目录，其余报错——新增顶层目录须改 check.mjs 白名单）与模板内容卫生校验（见 §4）。
+
 **命名建议**：模板 `<技术栈/框架>-<变体>`（`vue3-vite`、`go-service`、`java-springboot`、`node-lib`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`）；成员名取职责域（`backend`、`frontend`），避开既有模板名。
 
 **未来多模板源**：如需同时接多个模板仓库，限定名 `<source>:<name>` 消除跨源同名（当前单源设计，未启用）。
@@ -65,12 +69,13 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 ```
 
 - **成员条目与 singles 同形状**：`name` + 一句话 `description`（language / framework 可选），`projects` 数组顺序 = 生成顺序
-- **成员 = 目录**：每个成员必须存在 `solutions/<组合名>/<成员名>/` 目录（完整项目骨架，含规范骨架三文件），组合目录下的子目录也必须全部登记进 projects（双向一致，check.mjs 与 CLI 双重校验）
+- **成员 = 目录**：每个成员必须存在 `solutions/<组合名>/<成员名>/` 目录（完整项目骨架，含规范骨架三文件），组合目录下的子目录也必须全部登记进 projects（双向一致，check.mjs 与 CLI 双重校验；组合根 `docs/` 豁免——它是耦合资产目录，不是成员）
+- **组合根耦合资产（两件套，check.mjs 强制）**：组合根必须有 `CLAUDE.md`（组合定位 / 成员清单 / 耦合资产导航）与 `docs/`（≥1 篇 .md）。**跨成员共享的约定/规范/知识一律归总到这里，不写进成员项目**——成员平铺落盘后若各带副本，知识就散落 `projects/`，违背 workspace「1 根 5 抽屉」范式（知识归抽屉：biz-tech-docs / biz-product-docs）。每篇 docs/*.md 顶部 frontmatter 须含 `类型: tech|product`（决定 `/agile:knowledge` 同步去向：tech → biz-tech-docs，product → biz-product-docs）；组合根资产不做 `{{name}}` 占位替换（与具体落盘目录名无关，含占位符即报错）
 - **命名**：组合名规范同模板名且**全局唯一**（不得与模板/成员/其他组合重名）；建议 `<系统域>-<定位>`，如 `admin-base`
-- **生成语义**：`agile init project <系统标签> --template <组合名>` 将成员**平铺**落盘 `projects/<成员目录名>/`（`<系统标签>` 仅为输出汇报，不落目录）；成员项目 `{{name}}` = 实际落地目录名（平铺目录名全局唯一，包名天然唯一）；`--member <成员名>=<目录名>` 可覆盖成员目录名
+- **生成语义**：`agile init project <系统标签> --template <组合名>` 将成员**平铺**落盘 `projects/<成员目录名>/`（`<系统标签>` 仅为输出汇报，不落目录）；成员项目 `{{name}}` = 实际落地目录名（平铺目录名全局唯一，包名天然唯一）；`--member <成员名>=<目录名>` 可覆盖成员目录名；全部成员成功后 CLI 自动把组合根两件套快照到 workspace `.agile/solutions/<组合名>/`（与生成清单同为入库资产，快照已存在则跳过不覆盖），`/agile:knowledge sync-template` 从该快照按类型同步进抽屉
 - **补缺与生成清单**：成功生成成员后，CLI 在 workspace 写生成清单 `.agile/manifests/<成员目录名>.json`（随项目 git add 入库）。重跑时清单一致 → 跳过 + warn；清单不符（缺文件/多文件，疑似上次 init 中途失败的残留）→ 硬错误，删除该目录重跑或 `--force` 重生成；无清单的陌生目录（同名普通项目、手写项目、旧版 CLI 生成）→ 维持跳过 + warn（人工核对；AI 层 `/agile:init` 生成前会先做撞名核对）。`--force` 重建仅对有清单的目录生效（陌生目录拒绝以防误删）。补缺按**本次调用的有效成员目录名**判定——覆盖过的成员再跑时须带相同 `--member`
 
-**新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点；无对应技术栈单例的成员从零手写——依赖版本须实查、配置形态对齐上游脚手架，详见 `/agile:add-template`）→ 在 `solutions` 数组登记组合与 `projects` 成员 → `node scripts/check.mjs` 验证。
+**新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点；无对应技术栈单例的成员从零手写——依赖版本须实查、配置形态对齐上游脚手架，详见 `/agile:add-template`）→ 在 `solutions` 数组登记组合与 `projects` 成员 → 建组合根两件套（`CLAUDE.md` 导航 + `docs/` 归总跨成员耦合资产，判据与 frontmatter 要求见上）→ `node scripts/check.mjs` 验证。
 
 ## 3. 缓存机制
 
@@ -91,13 +96,13 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 
 **git 语义**：模板仓库自身的 `.gitignore` 等不影响生成项目；生成项目是 workspace 单仓内的**普通目录**，CLI 生成后逐项目 `git add` 纳入 workspace 版本管理（不自动 commit）。
 
-**模板质量要求**（PR 检查项；前三条由 `scripts/check.mjs` 强制校验，违规即 CI 红）：
+**模板质量要求**（PR 检查项；其中无产物入库 / package.json 占位符 / README 测试命令 / 项目级规范骨架三文件由 `scripts/check.mjs` 强制校验，违规即 CI 红）：
 - **无产物入库**：`singles/` 与 `solutions/` 全树不得出现安装/构建产物——目录 `node_modules` / `.next` / `dist` / `build` / `coverage` / `.turbo` / `.vitest`，文件 `pnpm-lock.yaml` / `package-lock.json` / `yarn.lock` / `*.tsbuildinfo`；符号链接/junction 一并报错。跑完 install/build/test 后清理再提交；确需携带的特例在 `scripts/check.mjs` 顶部 `ALLOWED_ARTIFACTS` 人工显式登记（默认空，不做自动豁免）
 - **package.json 占位符**：含 `package.json` 的模板/成员，`name` 必须严格为 `{{name}}`（防固定名、防占位符被误替换后提交）
 - **README 测试命令**：每个 README 说明运行/测试命令（CLI 与插件依赖此约定执行测试）——`scripts/check.mjs` 以宽松正则校验测试命令存在性（npm/pnpm/yarn/make/go/mvn 形态；定位为防呆，允许漏报不允许误伤）
-
-**产物忽略**：模板目录里的安装/构建产物（`node_modules`、`dist`、`.next` 等）、符号链接/junction 与锁文件（`pnpm-lock.yaml` 等）不会进入生成项目——CLI 复制时自动忽略并逐项 warn 提示（本地调试期间无需清理产物）。但**提交入库前应清理**（`/agile:add-template` ③ 出口检查含清单与命令）——保持模板仓无产物是建设基线，勿依赖 CLI 的复制防御积累产物（CLI ≤ 2.1.0 直读含产物模板仓会崩溃）。
-
 - 至少包含一个可运行的测试（TDD 起点模板）
 - Java 模板的包目录用 `{{safeName}}` 占位
-- **项目级规范骨架三文件**（缺一不可，`scripts/check.mjs` 强制校验，单例模板与组合成员模板同标准）：`CLAUDE.md`（项目级入口索引：技术栈 / 命令速查 / 硬规则 / 规范索引，其中团队规范段带「⛔ 待人工确认」标记）、`docs/conventions.md`（目录 / 命名 / 测试默认值 + 团队补充约定节）、`docs/architecture.md`（ADR 骨架）——`init project` 生成项目时随模板带出，作为项目级规范的基础入口；前端模板（vue3-vite / react-vite）另附 `docs/ui.md`（UI 设计 token 与使用规则骨架，**非强制校验**，经 `/agile:init` 约定问答填充）
+- **项目级规范骨架三文件**（缺一不可，`scripts/check.mjs` 强制校验，单例模板与组合成员模板同标准）：`CLAUDE.md`（项目级入口索引：技术栈 / 命令速查 / 硬规则 / 规范索引，其中团队规范段带「⛔ 栈领域待人工确认」标记）、`docs/conventions.md`（目录 / 命名 / 测试默认值 + 团队补充约定节）、`docs/architecture.md`（ADR 骨架）——`init project` 生成项目时随模板带出，作为项目级规范的基础入口；前端模板（vue3-vite / react-vite）另附 `docs/ui.md`（UI 设计 token 与使用规则骨架，**非强制校验**，经 `/agile:init` 约定问答填充）
+- **组合根耦合资产两件套**（组合模板，`scripts/check.mjs` 强制校验）：组合根 `CLAUDE.md` 与 `docs/`（≥1 篇 .md）必须存在；每篇 docs/*.md 顶部 frontmatter 须含 `类型: tech|product`（`/agile:knowledge` 按此同步到 biz-tech-docs / biz-product-docs）；组合根资产含 `{{name}}` / `{{safeName}}` 占位符即报错（组合级资产不做占位替换）——语义见 §2「组合根耦合资产」
+
+**产物忽略**：模板目录里的安装/构建产物（`node_modules`、`dist`、`.next` 等）、符号链接/junction 与锁文件（`pnpm-lock.yaml` 等）不会进入生成项目——CLI 复制时自动忽略并逐项 warn 提示（本地调试期间无需清理产物）。但**提交入库前应清理**（`/agile:add-template` ③ 出口检查含清单与命令）——保持模板仓无产物是建设基线，勿依赖 CLI 的复制防御积累产物（CLI ≤ 2.1.0 直读含产物模板仓会崩溃）。
