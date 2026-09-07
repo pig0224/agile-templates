@@ -11,8 +11,8 @@
 
 ```bash
 npm i -g fcc-agile-cli
-agile template list                 # 列出全部模板（拉取/更新缓存）
-agile init project order-service --template go-service
+agile template list                 # 列出单例模板与组合模板（拉取/更新缓存）
+agile init project --template go-service
 agile template update               # 强制刷新模板缓存
 ```
 
@@ -22,11 +22,7 @@ agile template update               # 强制刷新模板缓存
 ├── registry.json               # 注册中心 v2：singles / solutions 全数组（条目 = name + description + language?/framework?）
 ├── registry.schema.json        # JSON Schema（字段中文说明，编辑器补全校验）
 ├── singles/                    # 单例模板（一个模板一个完整项目骨架，目录名 = 模板名）
-│   ├── vue3-vite/
-│   ├── react-vite/
-│   ├── go-service/
-│   ├── java-springboot/
-│   └── node-lib/
+│   └── <模板名>/
 └── solutions/                  # 组合模板：一组合一目录，成员 = 组合专属完整模板骨架
     └── <组合名>/<成员名>/
 ```
@@ -45,12 +41,7 @@ agile template update               # 强制刷新模板缓存
 
 ## 模板约定
 
-**命名（防冲突设计）**：
-- 格式 `^[a-z][a-z0-9-]*$`
-- **模板名 / 组合名 / 成员名三段全局唯一**（init 后全部平铺落盘 `projects/`，同一命名空间）
-- 命名模式：模板 `<技术栈/框架>-<变体>`（`vue3-vite`、`go-service`…）；组合 `<系统域>-<定位>`（`admin-base`…）
-- **目录名必须与 registry.json 中的 name 完全一致**（无 path 字段，目录由名字派生；CLI 与 check 脚本双重强制校验，不一致直接拒绝）
-- 未来支持多模板源时，限定名为 `<source>:<name>` 消除跨源同名
+**命名（防冲突设计）**：格式 `^[a-z][a-z0-9-]*$`；模板名 / 组合名 / 成员名三段全局唯一（init 后全部平铺落盘 `projects/`，同一命名空间）；目录名必须与 registry.json 中的 name 完全一致（无 path 字段，目录由名字派生；CLI 与 check 脚本双重强制校验，不一致直接拒绝）。命名模式：模板 `<技术栈/框架>-<变体>`（`vue3-vite`、`go-service`…）；组合 `<系统域>-<定位>`（`admin-base`…）。完整防冲突设计见 [docs/registry.md](./docs/registry.md)。
 
 **变量替换**：脚手架生成时对文本文件做占位符替换（含目录名）：
 - `{{name}}` → **实际落地目录名**（单例 = 项目名；组合成员 = 平铺后的成员目录名，CLI 校验 `^[a-z][a-z0-9-]*$`——占位符只应出现在该格式合法的位置）

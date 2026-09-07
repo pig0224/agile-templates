@@ -19,9 +19,9 @@ node scripts/check.mjs                   # 注册中心一致性校验（CI 同�
 用户侧（CLI，本布局需 CLI ≥ 2.1.0）：
 
 ```bash
-agile template list                                # 列出模板与组合模板（workspace 内外均可；默认读缓存）
-agile init project <name> --template <模板名>      # 用单例模板生成项目（落 projects/<name>/）
-agile init project <系统标签> --template <组合名>  # 组合模板平铺生成全部成员项目（--member 成员名=目录名 改成员目录名）
+agile template list                                # 列出单例模板与组合模板（workspace 内外均可；默认读缓存）
+agile init project --template <模板名>             # 用单例模板生成项目（缺省 --name 用模板名；落 projects/<目录名>/）
+agile init project --template <组合名>             # 组合模板平铺生成全部成员项目（--name 成员名=目录名 改成员目录名）
 ```
 
 本地调试本仓库模板（模板源直读本地路径，不走缓存）：
@@ -66,6 +66,6 @@ scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构
   - `CLAUDE.md`：项目级入口索引（技术栈 / 命令速查 / 硬规则 / 规范索引）；团队规范段写 `../../biz-tech-docs/` 并带**「⛔ 栈领域待人工确认」**标记——AI 首次在项目工作时列出 `frameworks/` 实际目录，经人工确认后改写为具体领域（不预写死栈路径）
   - `docs/conventions.md`：目录 / 命名 / 测试默认值（如实描述模板初始骨架 + 增长建议）+ 团队补充约定节
   - `docs/architecture.md`：ADR 骨架（背景 / 决策 / 后果三段式）+ ADR-001 初始条目
-- 前端模板（vue3-vite / react-vite）附赠 `docs/ui.md`：UI 设计 token 与使用规则骨架（**非强制校验**，经 `/agile:init` 约定问答填充）
+- 前端模板附赠 `docs/ui.md`：UI 设计 token 与使用规则骨架（**非强制校验**，经 `/agile:init` 约定问答填充）
 - 预填内容必须与模板实际一致：命令速查对齐 package.json scripts / Makefile 目标；不臆造模板没有的目录结构
 - **新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点，按组合需求定制；仓库无对应技术栈单例的成员从零手写，勿强行复制不相干基座）→ 在 registry.json 的 `solutions` 数组登记组合与 `projects` 成员 → 建组合根两件套（`CLAUDE.md` 导航 + `docs/` 归总跨成员耦合资产——判据：≥2 成员共享/跨成员协作协议才归总，单成员内部约定留成员项目；每篇标 `类型: tech|product`）→ `node scripts/check.mjs` 验证双向一致
