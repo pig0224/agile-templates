@@ -77,6 +77,8 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 
 **新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点；无对应技术栈单例的成员从零手写——依赖版本须实查、配置形态对齐上游脚手架，详见 `/agile:add-template`）→ 在 `solutions` 数组登记组合与 `projects` 成员 → 建组合根两件套（`CLAUDE.md` 导航 + `docs/` 归总跨成员耦合资产，判据与 frontmatter 要求见上）→ `node scripts/check.mjs` 验证。
 
+**模板的两条生产路径**：**正向建设**用插件命令 `/agile:add-template`（在模板仓根目录执行——A 从零手写 / B 派生改造 / C 上游脚手架引入 / D 组合模板四种流程）；**反向沉淀**用 `/agile:share-template`（在 workspace 内执行——把既有项目连同沉淀的规范与知识打包为模板：清理审计、占位符逆向还原、registry.json 登记、check + 冒烟，产物落盘到本仓 `singles/` 或 `solutions/`）。两条路径产物同构，登记与校验要求一致（均含组合根两件套要求）；源项目全程只读，一切修改只发生在本仓副本。
+
 ## 3. 缓存机制
 
 ```
