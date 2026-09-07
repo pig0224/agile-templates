@@ -17,7 +17,15 @@
  *      - 根一级目录白名单：singles / solutions / docs / scripts / 隐藏目录，其余报错
  *   9. 三段全局唯一：模板名 / 组合名 / 成员名互不重名（双向校验，含组合名 vs 其他组合的成员名）
  *  10. registry.yaml 已废弃：仓库内不得再保留（v2 起唯一注册中心为 registry.json）
- * 退出码：0 = 通过；1 = 存在问题
+ *  11. 模板内容卫生·A 产物黑名单：singles/ 与 solutions/ 全树扫描——目录 ∈ {node_modules, .next, dist,
+ *      build, coverage, .turbo, .vitest} 与文件 ∈ {pnpm-lock.yaml, package-lock.json, yarn.lock, *.tsbuildinfo}
+ *      报错（产物不入库）；符号链接/junction 跳过不跟随并报错（防 junction 形态产物漏报与递归循环）；
+ *      ALLOWED_ARTIFACTS 显式放行（相对仓根正斜杠路径，目录条目按前缀放行整棵子树），默认为空不做自动豁免
+ *  12. 模板内容卫生·B 占位符：模板/成员目录存在 package.json 时，name 必须严格 === "{{name}}"
+ *      （防固定名、防占位符被误替换后提交）
+ *  13. 模板内容卫生·C README 测试命令：README.md 必须匹配宽松正则（npm/pnpm/yarn [run] test、make test、
+ *      go test、mvn … test）——防 README 与 scripts 脱节；定位为防呆，允许漏报不允许误伤；README 缺失一并报错
+ *  退出码：0 = 通过；1 = 存在问题
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -30,6 +38,15 @@ const SKELETON_FILES = ['CLAUDE.md', 'docs/conventions.md', 'docs/architecture.m
 const ROOT_ALLOWED_DIRS = new Set(['singles', 'solutions', 'docs', 'scripts']);
 const ENTRY_FIELDS = ['name', 'description', 'language', 'framework'];
 const SOLUTION_FIELDS = ['name', 'description', 'projects'];
+
+// —— 模板内容卫生（契约 11–13）——
+const ARTIFACT_DIRS = new Set(['node_modules', '.next', 'dist', 'build', 'coverage', '.turbo', '.vitest']);
+const ARTIFACT_FILES = new Set(['pnpm-lock.yaml', 'package-lock.json', 'yarn.lock']);
+const ARTIFACT_FILE_RE = /\.tsbuildinfo$/;
+/** 产物显式放行清单：元素 = 相对仓库根的正斜杠路径（目录条目按前缀放行整棵子树）。
+ *  默认为空——模板树应无任何安装/构建产物；未来某模板确需携带时在此人工登记，不做自动豁免。 */
+const ALLOWED_ARTIFACTS = [];
+const README_TEST_RE = /\b(npm|pnpm|yarn)\s+(run\s+)?test\b|\bmake\s+test\b|\bgo\s+test\b|\bmvn\b[^\n]*\btest\b/;
 
 async function isDir(p) {
   return fs.stat(p).then((s) => s.isDirectory()).catch(() => false);
@@ -46,6 +63,79 @@ async function checkSkeleton(label, dir, issues) {
     if (!(await isFile(path.join(dir, relFile)))) {
       issues.push(`${label} 缺少项目级规范骨架文件：${relFile}`);
     }
+  }
+}
+
+/** A. 产物黑名单（契约 11）：自 rootAbs 全树扫描，违规路径以 relBase 为前缀（正斜杠相对形式）报告。
+ *  符号链接/junction 跳过不跟随并报错——既防 junction 形态产物漏报，又防符号链接循环导致扫描失控；
+ *  命中黑名单目录即剪枝（报目录本身，不递归内部）。allow = 相对路径前缀放行清单（见 ALLOWED_ARTIFACTS）。 */
+async function scanArtifacts(rootAbs, relBase, allow, issues) {
+  if (!(await isDir(rootAbs))) return;
+  const walk = async (dir) => {
+    for (const ent of await fs.readdir(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, ent.name);
+      const rel = `${relBase}/${path.relative(rootAbs, abs).split(path.sep).join('/')}`;
+      if (allow.includes(rel) || allow.some((a) => rel.startsWith(`${a}/`))) continue;
+      if (ent.isSymbolicLink()) {
+        issues.push(`符号链接/junction 不应出现在模板树中：${rel}（检查是否为残留的安装/构建产物或依赖目录别名）`);
+        continue;
+      }
+      if (ent.isDirectory()) {
+        if (ARTIFACT_DIRS.has(ent.name)) {
+          issues.push(`模板树存在产物目录：${rel}/（产物不入库；跑完 install/build/test 后请清理）`);
+          continue;
+        }
+        await walk(abs);
+        continue;
+      }
+      if (ARTIFACT_FILES.has(ent.name) || ARTIFACT_FILE_RE.test(ent.name)) {
+        issues.push(`模板树存在产物文件：${rel}（锁文件/增量编译产物不入库）`);
+      }
+    }
+  };
+  await walk(rootAbs);
+}
+
+/** B. package.json name 占位符校验（契约 12）：存在 package.json 时 name 必须严格 === "{{name}}"；
+ *  目录缺失时跳过（由调用方报目录不存在）。 */
+async function checkPkgName(label, dir, issues) {
+  if (!(await isDir(dir))) return;
+  const pkgPath = path.join(dir, 'package.json');
+  if (!(await isFile(pkgPath))) return;
+  const raw = await fs.readFile(pkgPath, 'utf8').catch(() => null);
+  if (raw === null) {
+    issues.push(`${label} 的 package.json 读取失败`);
+    return;
+  }
+  let pkg;
+  try {
+    pkg = JSON.parse(raw);
+  } catch (e) {
+    issues.push(`${label} 的 package.json 不是合法的 JSON：${e.message}`);
+    return;
+  }
+  if (pkg?.name !== '{{name}}') {
+    issues.push(
+      `${label} 的 package.json name 必须严格为 "{{name}}"（实际：${JSON.stringify(pkg?.name ?? null)}` +
+        `——防固定名与占位符被误替换后提交）`,
+    );
+  }
+}
+
+/** C. README 测试命令存在性（契约 13）：README.md 须匹配 README_TEST_RE（宽松防脱节，允许漏报不允许误伤）；
+ *  README 缺失一并报错；目录缺失时跳过（由调用方报目录不存在）。 */
+async function checkReadmeTest(label, dir, issues) {
+  if (!(await isDir(dir))) return;
+  const readme = path.join(dir, 'README.md');
+  if (!(await isFile(readme))) {
+    issues.push(`${label} 缺少 README.md（须写明运行/测试命令）`);
+    return;
+  }
+  const text = await fs.readFile(readme, 'utf8').catch(() => '');
+  if (!README_TEST_RE.test(text)) {
+    issues.push(
+      `${label} 的 README.md 未匹配到测试命令（npm/pnpm/yarn [run] test、make test、go test、mvn … test 之一）——README 与 scripts 脱节？`,
+    );
   }
 }
 
@@ -216,6 +306,8 @@ async function main() {
       continue;
     }
     await checkSkeleton(`模板 ${name}`, dir, issues);
+    await checkPkgName(`模板 ${name}`, dir, issues);
+    await checkReadmeTest(`模板 ${name}`, dir, issues);
   }
 
   // ⑥ 组合模板：名字全局唯一 / projects 形状与顺序 / 成员目录 / 双向一致
@@ -268,6 +360,8 @@ async function main() {
         issues.push(`成员项目目录不存在：solutions/${name}/${member}/（目录由名字约定派生）`);
       }
       await checkSkeleton(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
+      await checkPkgName(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
+      await checkReadmeTest(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
 
       // 成员名全局唯一：平铺落盘 projects/ 后直接占用顶层目录名，与模板/组合/其他成员同空间
       if (singleNames.has(member)) {
@@ -335,6 +429,10 @@ async function main() {
         `单例模板移入 singles/，组合模板建 solutions/<组合>/<成员>/；确非模板目录则加入本脚本 ROOT_ALLOWED_DIRS`,
     );
   }
+
+  // ⑨ 模板内容卫生·A：singles/ 与 solutions/ 全树产物黑名单扫描（ALLOWED_ARTIFACTS 显式放行，默认空）
+  await scanArtifacts(path.join(repoDir, 'singles'), 'singles', ALLOWED_ARTIFACTS, issues);
+  await scanArtifacts(path.join(repoDir, 'solutions'), 'solutions', ALLOWED_ARTIFACTS, issues);
 
   if (issues.length > 0) {
     for (const issue of issues) console.error(`✖ ${issue}`);
