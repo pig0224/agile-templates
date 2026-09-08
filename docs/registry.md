@@ -94,10 +94,11 @@ CLI 侧命令（命令均无 `--registry` 类选项——模板源统一读配�
 
 **git 语义**：模板仓库自身的 `.gitignore` 等不影响生成项目；生成项目是 workspace 单仓内的**普通目录**，CLI 生成后逐项目 `git add` 纳入 workspace 版本管理（不自动 commit）。
 
-**模板质量要求**（PR 检查项；其中无产物入库 / package.json 占位符 / README 测试命令 / 项目级规范骨架三文件由 `scripts/check.mjs` 强制校验，违规即 CI 红）：
+**模板质量要求**（PR 检查项；其中无产物入库 / package.json 占位符 / README 测试命令 / 会话层配置黑名单 / 项目级规范骨架三文件由 `scripts/check.mjs` 强制校验，违规即 CI 红）：
 - **无产物入库**：`singles/` 与 `solutions/` 全树不得出现安装/构建产物——目录 `node_modules` / `.next` / `dist` / `build` / `coverage` / `.turbo` / `.vitest`，文件 `pnpm-lock.yaml` / `package-lock.json` / `yarn.lock` / `*.tsbuildinfo`；符号链接/junction 一并报错。跑完 install/build/test 后清理再提交；确需携带的特例在 `scripts/check.mjs` 顶部 `ALLOWED_ARTIFACTS` 人工显式登记（默认空，不做自动豁免）
 - **package.json 占位符**：含 `package.json` 的模板/成员，`name` 必须严格为 `{{name}}`（防固定名、防占位符被误替换后提交）
 - **README 测试命令**：每个 README 说明运行/测试命令（CLI 与插件依赖此约定执行测试）——`scripts/check.mjs` 以宽松正则校验测试命令存在性（npm/pnpm/yarn/make/go/mvn 形态；定位为防呆，允许漏报不允许误伤）
+- **会话层配置不进模板**：`singles/` 与 `solutions/` 全树不得出现 `.claude/` 目录与 `.mcp.json` 文件（`scripts/check.mjs` 契约 15 强制校验）——会话层配置只认启动目录（workspace 根），生成项目内的这些文件不会被读取；配置归使用方 workspace 根，工具选型由团队自决
 - 至少包含一个可运行的测试（TDD 起点模板）
 - Java 模板的包目录用 `{{safeName}}` 占位
 - **项目级规范骨架三文件**（缺一不可，`scripts/check.mjs` 强制校验，单例模板与组合成员模板同标准）：`CLAUDE.md`（项目级入口索引：技术栈 / 命令速查 / 硬规则 / 规范索引，其中团队规范段带「⛔ 栈领域待人工确认」标记）、`docs/conventions.md`（目录 / 命名 / 测试默认值 + 团队补充约定节）、`docs/architecture.md`（ADR 骨架）——`init project` 生成项目时随模板带出，作为项目级规范的基础入口；前端模板另附 `docs/ui.md`（UI 设计 token 与使用规则骨架，**非强制校验**，经 `/agile:init` 约定问答填充）

@@ -53,7 +53,7 @@ scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构
 4. **组合模板**：`projects` 为成员条目数组（与 singles 条目同形状：name + description，language / framework 可选），数组顺序 = 生成顺序；登记与成员目录**双向一致**（每个成员须有 `solutions/<组合>/<成员>/` 目录，组合目录下子目录须全部登记——组合根 `docs/` 豁免）；成员名全局唯一——成员平铺落盘 `projects/` 后直接占用顶层目录名，与模板/组合同命名空间
 5. **组合根耦合资产两件套**：组合根必须有 `CLAUDE.md`（组合定位 / 成员清单 / 耦合资产导航）与 `docs/`（≥1 篇 .md）；**跨成员共享的约定/规范/知识一律归总到这里，不写进成员项目**（成员平铺落盘后知识散落 `projects/` 会违背 workspace「1 根 5 抽屉」范式）；每篇 docs/*.md 顶部 frontmatter 须含 `类型: tech|product`（`/agile:knowledge` 按此同步到 biz-tech-docs / biz-product-docs）；组合根资产不做 `{{name}}` 占位替换，含占位符即报错。`init project` 后 CLI 自动把两件套快照到 workspace `.agile/solutions/<组合>/`
 
-> 注：第 1–4 项由 CLI（validateTemplateRepo）与 check.mjs 双重强制（含数组重复登记与组合内幽灵成员目录）；JSON 重复键、未知字段（顶层与条目）、规范骨架三文件（单例模板与组合成员模板同标准）、组合根耦合资产两件套（存在性 / 类型 frontmatter / 占位符禁用）、singles/ 与 solutions/ 整体反向完整性（幽灵单例/幽灵组合目录）、根一级目录白名单与模板内容卫生（产物黑名单 / package.json name 占位符 / README 测试命令存在性）**仅 check.mjs 强制**，勿误以为 CLI 也会拦。CI 同样只跑 check.mjs（模板内容不做 CI 构建/测试）。
+> 注：第 1–4 项由 CLI（validateTemplateRepo）与 check.mjs 双重强制（含数组重复登记与组合内幽灵成员目录）；JSON 重复键、未知字段（顶层与条目）、规范骨架三文件（单例模板与组合成员模板同标准）、组合根耦合资产两件套（存在性 / 类型 frontmatter / 占位符禁用）、singles/ 与 solutions/ 整体反向完整性（幽灵单例/幽灵组合目录）、根一级目录白名单与模板内容卫生（产物黑名单 / package.json name 占位符 / README 测试命令存在性 / 会话层配置黑名单——.claude/ 目录与 .mcp.json 文件）**仅 check.mjs 强制**，勿误以为 CLI 也会拦。CI 同样只跑 check.mjs（模板内容不做 CI 构建/测试）。
 
 命名模式：模板 `<技术栈>-<变体>`（`vue3-vite`、`go-service`；扩展示例 `vue3-nuxt`、`go-grpc`、`node-cli`）；组合 `<系统域>-<定位>`（`admin-base`、`crm-base`）；成员名取职责域（`backend`、`frontend`，因全局唯一，避免与既有模板/组合/成员撞名）。
 
@@ -68,4 +68,5 @@ scripts/check.mjs           # 自含校验脚本（JSON 重复键扫描 + 结构
   - `docs/architecture.md`：ADR 骨架（背景 / 决策 / 后果三段式）+ ADR-001 初始条目
 - 前端模板附赠 `docs/ui.md`：UI 设计 token 与使用规则骨架（**非强制校验**，经 `/agile:init` 约定问答填充）
 - 预填内容必须与模板实际一致：命令速查对齐 package.json scripts / Makefile 目标；不臆造模板没有的目录结构
+- **会话层配置不进模板**：模板树（singles/ 与 solutions/）不得出现 `.claude/` 目录与 `.mcp.json` 文件（契约 15 强制）——会话层配置只认 workspace 根，生成项目内的这些文件不会被读取；配置归使用方 workspace 根，工具选型由团队自决
 - **新增组合的步骤**：为每个成员建 `solutions/<组合名>/<成员名>/`（复制最接近的单例模板作起点，按组合需求定制；仓库无对应技术栈单例的成员从零手写，勿强行复制不相干基座）→ 在 registry.json 的 `solutions` 数组登记组合与 `projects` 成员 → 建组合根两件套（`CLAUDE.md` 导航 + `docs/` 归总跨成员耦合资产——判据：≥2 成员共享/跨成员协作协议才归总，单成员内部约定留成员项目；每篇标 `类型: tech|product`）→ `node scripts/check.mjs` 验证双向一致

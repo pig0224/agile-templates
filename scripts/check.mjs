@@ -30,6 +30,10 @@
  *      .agile/solutions/<组合>/ 后经 /agile:knowledge 按资产类型同步进抽屉（biz-tech-docs / biz-product-docs）；
  *      每篇 docs/*.md 顶部 frontmatter 须含「类型: tech|product」（同步去向）；组合根资产不做占位替换，
  *      出现 {{name}}/{{safeName}} 即报错
+ *  15. 模板内容卫生·D 会话层配置黑名单：singles/ 与 solutions/ 全树扫描——.claude/ 目录与 .mcp.json 文件报错
+ *      （会话层配置只认启动目录：Claude Code 会话锚定 workspace 根，生成项目内的这些文件不会被读取；
+ *      配置归使用方 workspace 根，工具选型由团队自决）。符号链接不跟随（由契约 11 报错）；
+ *      命中 .claude/ 目录即剪枝（报目录本身，不递归内部）
  *  退出码：0 = 通过；1 = 存在问题
  */
 import fs from 'node:fs/promises';
@@ -53,6 +57,12 @@ const ARTIFACT_FILE_RE = /\.tsbuildinfo$/;
  *  默认为空——模板树应无任何安装/构建产物；未来某模板确需携带时在此人工登记，不做自动豁免。 */
 const ALLOWED_ARTIFACTS = [];
 const README_TEST_RE = /\b(npm|pnpm|yarn)\s+(run\s+)?test\b|\bmake\s+test\b|\bgo\s+test\b|\bmvn\b[^\n]*\btest\b/;
+
+// —— 模板内容卫生（契约 15）——
+// 会话层配置不进模板：Claude Code 会话锚定启动目录（workspace 根），生成项目内的 .claude/ 与
+// .mcp.json 不会被读取（agile 插件 SKILL 硬规则 7「壳层边界」）；配置归使用方 workspace 根，工具选型由团队自决
+const SESSION_CONFIG_DIRS = new Set(['.claude']);
+const SESSION_CONFIG_FILES = new Set(['.mcp.json']);
 
 async function isDir(p) {
   return fs.stat(p).then((s) => s.isDirectory()).catch(() => false);
@@ -147,6 +157,31 @@ async function checkReadmeTest(label, dir, issues) {
       `${label} 的 README.md 未匹配到测试命令（npm/pnpm/yarn [run] test、make test、go test、mvn … test 之一）——README 与 scripts 脱节？`,
     );
   }
+}
+
+/** D. 会话层配置黑名单（契约 15）：自 rootAbs 全树扫描，.claude/ 目录与 .mcp.json 文件报错。
+ *  符号链接不跟随（由契约 11 报错，此处跳过防循环）；命中 .claude/ 目录即剪枝（报目录本身，不递归内部）。 */
+async function scanSessionConfigs(rootAbs, relBase, issues) {
+  if (!(await isDir(rootAbs))) return;
+  const walk = async (dir) => {
+    for (const ent of await fs.readdir(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, ent.name);
+      const rel = `${relBase}/${path.relative(rootAbs, abs).split(path.sep).join('/')}`;
+      if (ent.isSymbolicLink()) continue;
+      if (ent.isDirectory()) {
+        if (SESSION_CONFIG_DIRS.has(ent.name)) {
+          issues.push(`模板树存在会话层配置目录：${rel}/（.claude/ 只认 workspace 根，项目内不被读取，不进模板）`);
+          continue;
+        }
+        await walk(abs);
+        continue;
+      }
+      if (SESSION_CONFIG_FILES.has(ent.name)) {
+        issues.push(`模板树存在会话层配置文件：${rel}（.mcp.json 只认 workspace 根，项目内不被读取，不进模板）`);
+      }
+    }
+  };
+  await walk(rootAbs);
 }
 
 /** 14. 组合根耦合资产校验：组合必须以根级 CLAUDE.md + docs/（≥1 篇 .md）归总跨成员约定与规范——
@@ -528,6 +563,10 @@ async function main() {
   // ⑨ 模板内容卫生·A：singles/ 与 solutions/ 全树产物黑名单扫描（ALLOWED_ARTIFACTS 显式放行，默认空）
   await scanArtifacts(path.join(repoDir, 'singles'), 'singles', ALLOWED_ARTIFACTS, issues);
   await scanArtifacts(path.join(repoDir, 'solutions'), 'solutions', ALLOWED_ARTIFACTS, issues);
+
+  // ⑩ 模板内容卫生·D：singles/ 与 solutions/ 全树会话层配置黑名单扫描（.claude/ 目录与 .mcp.json 文件）
+  await scanSessionConfigs(path.join(repoDir, 'singles'), 'singles', issues);
+  await scanSessionConfigs(path.join(repoDir, 'solutions'), 'solutions', issues);
 
   if (issues.length > 0) {
     for (const issue of issues) console.error(`✖ ${issue}`);
