@@ -17,7 +17,7 @@
  *      - 根一级目录白名单：singles / solutions / docs / scripts / 隐藏目录，其余报错
  *   9. 三段全局唯一：模板名 / 组合名 / 成员名互不重名（双向校验，含组合名 vs 其他组合的成员名）
  *  10. registry.yaml 已废弃：仓库内不得再保留（v2 起唯一注册中心为 registry.json）
- *  11. 模板内容卫生·A 产物黑名单：singles/ 与 solutions/ 全树扫描——目录 ∈ {node_modules, .next, dist,
+ *  11. 模板内容卫生·A 产物黑名单：singles/ 与 solutions/ 全树扫描——目录 ∈ {node_modules, .git, .next, dist,
  *      build, coverage, .turbo, .vitest} 与文件 ∈ {pnpm-lock.yaml, package-lock.json, yarn.lock, *.tsbuildinfo}
  *      报错（产物不入库）；符号链接/junction 跳过不跟随并报错（防 junction 形态产物漏报与递归循环）；
  *      ALLOWED_ARTIFACTS 显式放行（相对仓根正斜杠路径，目录条目按前缀放行整棵子树），默认为空不做自动豁免
@@ -45,7 +45,8 @@ const ENTRY_FIELDS = ['name', 'description', 'language', 'framework'];
 const SOLUTION_FIELDS = ['name', 'description', 'projects'];
 
 // —— 模板内容卫生（契约 11–13）——
-const ARTIFACT_DIRS = new Set(['node_modules', '.next', 'dist', 'build', 'coverage', '.turbo', '.vitest']);
+// .git 与 CLI（src/core/scaffold.ts ARTIFACT_NAMES）同清单：模板内嵌 .git 目录（误 git clone 进模板）同样视为产物
+const ARTIFACT_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'coverage', '.turbo', '.vitest']);
 const ARTIFACT_FILES = new Set(['pnpm-lock.yaml', 'package-lock.json', 'yarn.lock']);
 const ARTIFACT_FILE_RE = /\.tsbuildinfo$/;
 /** 产物显式放行清单：元素 = 相对仓库根的正斜杠路径（目录条目按前缀放行整棵子树）。
@@ -156,12 +157,26 @@ async function checkReadmeTest(label, dir, issues) {
  *  含 {{name}}/{{safeName}} 即报错。 */
 const COMBO_PLACEHOLDER_RE = /\{\{(?:name|safeName)\}\}/;
 const COMBO_TYPE_RE = /^类型:\s*(tech|product)\s*$/m;
-const FRONTMATTER_RE = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+// frontmatter \u5FC5\u987B\u662F\u6587\u4EF6\u7B2C\u4E00\u4E2A\u5185\u5BB9\u5757\uFF0C\u4F46\u5BB9\u5FCD BOM \u4E0E\u524D\u5BFC\u7A7A\u767D\u884C\uFF08\u7F16\u8F91\u5668/\u6A21\u677F\u5DE5\u5177\u5E38\u5728\u5934\u90E8\u7559\u7A7A\u884C\uFF09
+const FRONTMATTER_RE = /^\uFEFF?[ \t\r\n]*---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
 /** 取 markdown 顶部 frontmatter 块文本（无 frontmatter 块返回 null） */
 function frontmatterOf(text) {
   const m = FRONTMATTER_RE.exec(text);
   return m ? m[1] : null;
+}
+
+/** 递归收集 dir 下全部 .md 文件（组合根 docs/ 允许子目录组织，契约 14 校验不漏深层文档）；
+ *  符号链接不跟随（由契约 11 产物扫描报错，此处跳过防循环）。返回绝对路径数组。 */
+async function listMarkdownFiles(dir) {
+  const out = [];
+  for (const ent of await fs.readdir(dir, { withFileTypes: true })) {
+    if (ent.isSymbolicLink()) continue;
+    const abs = path.join(dir, ent.name);
+    if (ent.isDirectory()) out.push(...(await listMarkdownFiles(abs)));
+    else if (ent.isFile() && ent.name.endsWith('.md')) out.push(abs);
+  }
+  return out;
 }
 
 async function checkComboAssets(name, solDir, issues) {
@@ -187,12 +202,11 @@ async function checkComboAssets(name, solDir, issues) {
     );
     return;
   }
-  let mdCount = 0;
-  for (const ent of await fs.readdir(docsDir, { withFileTypes: true })) {
-    if (!ent.isFile() || !ent.name.endsWith('.md')) continue;
-    mdCount++;
-    const rel = `solutions/${name}/docs/${ent.name}`;
-    const text = await fs.readFile(path.join(docsDir, ent.name), 'utf8').catch(() => null);
+  // docs/ 允许子目录组织：递归收集全部 .md（契约 14 的 frontmatter 类型与占位符校验不漏深层文档）
+  const mdFiles = await listMarkdownFiles(docsDir);
+  for (const abs of mdFiles) {
+    const rel = `solutions/${name}/docs/${path.relative(docsDir, abs).split(path.sep).join('/')}`;
+    const text = await fs.readFile(abs, 'utf8').catch(() => null);
     if (text === null) {
       issues.push(`组合模板 ${name} 的组合根文档 ${rel} 读取失败`);
       continue;
@@ -207,7 +221,7 @@ async function checkComboAssets(name, solDir, issues) {
       );
     }
   }
-  if (mdCount === 0) {
+  if (mdFiles.length === 0) {
     issues.push(
       `组合模板 ${name} 的组合根 docs/ 下没有任何 .md 文档（组合必有跨成员耦合资产；纯独立项目不应组成组合）`,
     );
@@ -333,10 +347,10 @@ async function main() {
     issues.push(`registry.json 存在重复键：${key}（JSON 解析会静默取后者，必须去重）`);
   }
 
-  // ③ JSON 解析（语法错误透传定位信息）
+  // ③ JSON 解析（语法错误透传定位信息；先剥 BOM——带 BOM 的 UTF-8 文件 JSON.parse 会报「Unexpected token」）
   let registry;
   try {
-    registry = JSON.parse(raw);
+    registry = JSON.parse(raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw);
   } catch (e) {
     console.error(`✖ registry.json 不是合法的 JSON：${e.message}`);
     process.exit(1);
@@ -362,17 +376,17 @@ async function main() {
   }
 
   // ⑤ 单例模板：名字 / 重复登记 / 目录派生 / 规范骨架
+  // 一次暴露全部问题：名字不合法只记 issue，不跳过后续查重与目录/骨架校验
   const singleNames = new Set();
   for (const entry of Array.isArray(registry.singles) ? registry.singles : []) {
     const name = checkEntryShape('singles', entry, ENTRY_FIELDS, issues);
     if (name === null) continue;
     if (!NAME_RE.test(name)) {
       issues.push(`单例模板名 "${name}" 不符合规范 ^[a-z][a-z0-9-]*$`);
-      continue;
     }
     if (singleNames.has(name)) {
       issues.push(`单例模板 "${name}" 重复登记（singles 数组内 name 必须唯一）`);
-      continue;
+      continue; // 同名重复条目的后续问题完全相同，不重复报
     }
     singleNames.add(name);
     const dir = path.join(repoDir, 'singles', name);
@@ -387,70 +401,72 @@ async function main() {
 
   // ⑥ 组合模板：名字全局唯一 / projects 形状与顺序 / 成员目录 / 双向一致
   const solutionsArr = Array.isArray(registry.solutions) ? registry.solutions : [];
-  const solutionNames = new Set(
+  // 冲突校验用合法名全集（非法名已有专属 issue，不参与成员名冲突比对——与 CLI validateTemplateRepo 同口径）；
+  // 反向完整性用全部登记名（含非法名：已登记但名字不合法的组合，其目录不应再报「未登记」双重噪音）
+  const allSolutionNames = new Set(
     solutionsArr.filter(isObj).map((s) => s.name).filter((n) => typeof n === 'string'),
   );
+  const solutionNames = new Set([...allSolutionNames].filter((n) => NAME_RE.test(n)));
   const memberOwner = new Map(); // 成员名 → 归属组合（三段全局唯一命名空间）
   const seenSolutions = new Set();
   let memberCount = 0;
   for (const sol of solutionsArr) {
     const name = checkEntryShape('solutions', sol, SOLUTION_FIELDS, issues);
     if (name === null) continue;
+    // 一次暴露全部问题：名字不合法 / 与单例重名只记 issue，不跳过成员与目录校验
     if (!NAME_RE.test(name)) {
       issues.push(`组合模板名 "${name}" 不符合规范 ^[a-z][a-z0-9-]*$`);
-      continue;
     }
     if (singleNames.has(name)) {
       issues.push(`组合模板 "${name}" 与单例模板重名（组合与模板必须可区分）`);
-      continue;
     }
     if (seenSolutions.has(name)) {
       issues.push(`组合模板 "${name}" 重复登记（solutions 数组内 name 必须唯一）`);
-      continue;
+      continue; // 同名重复组合的后续问题完全相同，不重复报
     }
     seenSolutions.add(name);
-    if (!Array.isArray(sol.projects) || sol.projects.length === 0) {
-      issues.push(`组合模板 ${name} 缺少非空 projects 数组（成员条目与 singles 同形状，数组顺序 = 生成顺序）`);
-      continue;
-    }
 
     const declared = new Set();
-    for (const proj of sol.projects) {
-      const member = checkEntryShape(`组合模板 ${name} 的 projects`, proj, ENTRY_FIELDS, issues);
-      if (member === null) continue;
-      if (!NAME_RE.test(member)) {
-        issues.push(`组合模板 ${name} 的成员项目名 "${member}" 不合法（须满足 ^[a-z][a-z0-9-]*$）`);
-        continue;
-      }
-      if (declared.has(member)) {
-        issues.push(`组合模板 ${name} 的成员 "${member}" 重复登记（projects 数组内 name 必须唯一）`);
-        continue;
-      }
-      declared.add(member);
-      memberCount++;
+    if (!Array.isArray(sol.projects) || sol.projects.length === 0) {
+      issues.push(`组合模板 ${name} 缺少非空 projects 数组（成员条目与 singles 同形状，数组顺序 = 生成顺序）`);
+    } else {
+      for (const proj of sol.projects) {
+        const member = checkEntryShape(`组合模板 ${name} 的 projects`, proj, ENTRY_FIELDS, issues);
+        if (member === null) continue;
+        if (!NAME_RE.test(member)) {
+          issues.push(`组合模板 ${name} 的成员项目名 "${member}" 不合法（须满足 ^[a-z][a-z0-9-]*$）`);
+          continue;
+        }
+        if (declared.has(member)) {
+          issues.push(`组合模板 ${name} 的成员 "${member}" 重复登记（projects 数组内 name 必须唯一）`);
+          continue;
+        }
+        declared.add(member);
+        memberCount++;
 
-      // 成员目录必须实际存在（成员 = 组合专属完整模板骨架）
-      const memberDir = path.join(repoDir, 'solutions', name, member);
-      if (!(await isDir(memberDir))) {
-        issues.push(`成员项目目录不存在：solutions/${name}/${member}/（目录由名字约定派生）`);
-      }
-      await checkSkeleton(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
-      await checkPkgName(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
-      await checkReadmeTest(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
+        // 成员目录必须实际存在（成员 = 组合专属完整模板骨架）
+        const memberDir = path.join(repoDir, 'solutions', name, member);
+        if (!(await isDir(memberDir))) {
+          issues.push(`成员项目目录不存在：solutions/${name}/${member}/（目录由名字约定派生）`);
+        }
+        await checkSkeleton(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
+        await checkPkgName(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
+        await checkReadmeTest(`组合模板 ${name} 的成员 ${member}`, memberDir, issues);
 
-      // 成员名全局唯一：平铺落盘 projects/ 后直接占用顶层目录名，与模板/组合/其他成员同空间
-      if (singleNames.has(member)) {
-        issues.push(
-          `组合模板 ${name} 的成员名 "${member}" 与单例模板名冲突（成员平铺落盘 projects/ 会抢占目录名，三段全局唯一）`,
-        );
-      } else if (solutionNames.has(member)) {
-        issues.push(`组合模板 ${name} 的成员名 "${member}" 与组合模板名冲突（三段全局唯一）`);
-      } else {
-        const owner = memberOwner.get(member);
-        if (owner) {
-          issues.push(`组合模板 ${name} 的成员名 "${member}" 与组合 ${owner} 的成员名冲突（三段全局唯一）`);
+        // 成员名全局唯一：平铺落盘 projects/ 后直接占用顶层目录名，与模板/组合/其他成员同空间
+        if (singleNames.has(member)) {
+          issues.push(
+            `组合模板 ${name} 的成员名 "${member}" 与单例模板名冲突（成员平铺落盘 projects/ 会抢占目录名，三段全局唯一）`,
+          );
+        } else if (solutionNames.has(member)) {
+          issues.push(`组合模板 ${name} 的成员名 "${member}" 与组合模板名冲突（三段全局唯一）`);
         } else {
-          memberOwner.set(member, name);
+          const owner = memberOwner.get(member);
+          if (owner) {
+            issues.push(`组合模板 ${name} 的成员名 "${member}" 与组合 ${owner} 的成员名冲突（三段全局唯一）`);
+          } else {
+            memberOwner.set(member, name);
+          }
         }
       }
     }
@@ -492,7 +508,8 @@ async function main() {
   if (await isDir(solutionsRoot)) {
     for (const ent of await fs.readdir(solutionsRoot, { withFileTypes: true })) {
       if (!ent.isDirectory() || ent.name.startsWith('.')) continue;
-      if (!solutionNames.has(ent.name)) {
+      // 用全部登记名比对：已登记但名字不合法的组合不再叠加「未登记」噪音（名字问题在 ⑥ 已报）
+      if (!allSolutionNames.has(ent.name)) {
         issues.push(`目录 solutions/${ent.name}/ 未在 registry.json 登记——请补登记或删除该目录`);
       }
     }
